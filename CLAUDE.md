@@ -63,7 +63,7 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 |-------|--------|-------|
 | **Mobile/Web Client** | React + PWA (Capacitor for iOS/Android later) | One codebase, offline-capable. Glove-friendly touch targets. WCAG 2.1 AA. |
 | **Admin Console** | React + shared design system | Ingestion, review queue, analytics, user management. |
-| **API** | Node.js (NestJS) or Python (FastAPI) | FastAPI preferred — pairs well with async ML ingestion code. |
+| **API** | Python (FastAPI) | FastAPI preferred — pairs well with async ML ingestion code. |
 | **Async Workers** | Python + Celery/Temporal | Ingestion, OCR, embedding, offline pack building. Horizontally scalable. |
 | **Vector DB** | **pgvector (start) → Pinecone/Weaviate at scale** | pgvector keeps early ops simple inside Postgres; separate namespaces per tenant. |
 | **Keyword Search** | PostgreSQL full-text or OpenSearch | Hybrid retrieval complement; part of the BM25 + dense vector merge. |
@@ -72,7 +72,7 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 | **PDF/OCR** | PyMuPDF + Tesseract or cloud OCR; Claude vision for figure captioning | Support scanned manuals (real SMB need). |
 | **LLM** | **Anthropic Claude** (via provider-abstraction layer) | Answers, vision (photo diagnosis), safety pre-screen. Abstraction layer protects against cost/capability shifts. |
 | **Auth** | OIDC (Auth0/Keycloak); SAML SSO at Business tier | |
-| **Infrastructure** | Containerized (Kubernetes or ECS), IaC (Terraform) | EU + IL region options (GDPR + Israeli Privacy Law). |
+| **Infrastructure** | Containerized (Kubernetes or ECS), IaC (Terraform) | EU region options (GDPR). |
 | **Observability** | OpenTelemetry + structured answer-quality metrics (groundedness, helpfulness) | Track as first-class SLOs. |
 
 ### 3.1 LLM Provider Abstraction
@@ -136,7 +136,7 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 - **OCR/Captioning:** Buy cloud OCR (Google Cloud Vision, AWS Textract) for robustness. Use Claude vision for figure captioning (it's excellent at this).
 
 ### 5.3 Feature Scope & MVP
-- **MVP scope is non-negotiable:** Text Q&A + citations, PDF ingestion, equipment profiles, **full curation workflow** (this is the moat), basic admin, English + Hebrew, feedback loop.
+- **MVP scope is non-negotiable:** Text Q&A + citations, PDF ingestion, equipment profiles, **full curation workflow** (this is the moat), basic admin, English, feedback loop.
 - **Photo diagnosis, voice input, offline packs, advanced analytics:** Phase 2+.
 - **Reason:** Curation workflow is where the product earns trust. Don't ship without it.
 
@@ -186,7 +186,6 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 
 ### 8.3 Data Residency & Privacy
 - **GDPR compliance:** Support data-residency controls (EU region). Per-tenant deletion within 30 days of request.
-- **Israeli Privacy Protection Law:** Equivalent controls for IL-based customers.
 - **Customer data never trains shared models.** Each organization's documents and fixes are siloed.
 
 ---
