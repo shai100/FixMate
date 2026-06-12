@@ -64,21 +64,22 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 | **Mobile/Web Client** | React + PWA (Capacitor for iOS/Android later) | One codebase, offline-capable. Glove-friendly touch targets. WCAG 2.1 AA. |
 | **Admin Console** | React + shared design system | Ingestion, review queue, analytics, user management. |
 | **API** | Python (FastAPI) | FastAPI preferred — pairs well with async ML ingestion code. |
-| **Async Workers** | Python + Celery/Temporal | Ingestion, OCR, embedding, offline pack building. Horizontally scalable. |
+| **Async Workers** | Python + **Celery (Redis broker)** | Chosen over Temporal (spec v1.1): one small container locally. Ingestion, OCR, embedding, offline pack building. Horizontally scalable. |
 | **Vector DB** | **pgvector (start) → Pinecone/Weaviate at scale** | pgvector keeps early ops simple inside Postgres; separate namespaces per tenant. |
-| **Keyword Search** | PostgreSQL full-text or OpenSearch | Hybrid retrieval complement; part of the BM25 + dense vector merge. |
+| **Keyword Search** | **PostgreSQL full-text search** (→ `pg_search`/OpenSearch only at scale) | Hybrid retrieval complement; part of the BM25 + dense vector merge. Same DB, same RLS isolation. |
 | **RDBMS** | PostgreSQL with Row-Level Security (RLS) | Tenant isolation, fixes + states, audit logs, user management. |
-| **Object Storage** | S3-compatible (AWS S3, MinIO, or DigitalOcean Spaces) | Original PDFs, extracted figures, offline packs. |
+| **Object Storage** | **MinIO (local/MVP) → AWS S3 (cloud)** | Identical S3 API both ways. Original PDFs, extracted figures, offline packs. |
 | **PDF/OCR** | PyMuPDF + Tesseract or cloud OCR; Claude vision for figure captioning | Support scanned manuals (real SMB need). |
-| **LLM** | **Anthropic Claude** (via provider-abstraction layer) | Answers, vision (photo diagnosis), safety pre-screen. Abstraction layer protects against cost/capability shifts. |
-| **Auth** | OIDC (Auth0/Keycloak); SAML SSO at Business tier | |
-| **Infrastructure** | Containerized (Kubernetes or ECS), IaC (Terraform) | EU region options (GDPR). |
+| **LLM** | **Dual backend via provider-abstraction layer:** Ollama-served local model (MVP/dev) + **Anthropic Claude** (production) | Answers, vision (photo diagnosis), safety pre-screen. `LLM_PROVIDER=ollama\|anthropic`. Local 4 GB GPU profile: Qwen3-4B Q4 generation, BGE-M3 embeddings on CPU (spec §8.3). Release gates & technician pilots run on Claude. |
+| **Auth** | OIDC via **Keycloak**; SAML SSO at Business tier | Chosen over Auth0 (spec v1.1): runs as a local container, no SaaS dependency, no per-MAU pricing. |
+| **Infrastructure** | **Docker Compose (local/MVP) → AWS ECS Fargate (cloud)**, IaC (Terraform) | EU + il-central-1 (Tel Aviv) regions for GDPR/IL residency. Full local-PC profile: spec §8. |
 | **Observability** | OpenTelemetry + structured answer-quality metrics (groundedness, helpfulness) | Track as first-class SLOs. |
 
 ### 3.1 LLM Provider Abstraction
 - Implement a provider-agnostic interface for LLM calls (e.g., `AnswerComposer` with pluggable backends).
 - **Why:** Protects against cost swings and capability shifts; enables fallback strategies and per-tenant token budgets.
-- **Non-negotiable:** Cache frequent answers and multi-turn contexts (use Claude's prompt caching feature).
+- **Non-negotiable:** Cache frequent answers and multi-turn contexts (use Claude's prompt caching feature on the Anthropic backend; application-level answer caching on the local backend).
+- **Backend selection:** `LLM_PROVIDER=ollama` (local MVP/dev, spec §8.3) or `LLM_PROVIDER=anthropic` (production). Claude models are API-only and cannot be self-hosted — the local profile uses open-weight models served by Ollama.
 
 ---
 
@@ -247,6 +248,7 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-06-12 | Initial | Document created; captured product spec, architecture, and development norms |
+| 2026-06-12 | Spec v1.1 | Resolved open stack options (Celery, Postgres FTS, Keycloak, MinIO→S3, Compose→ECS Fargate); LLM layer made dual-backend (local Ollama model for MVP on 4 GB GPU, Claude for production); local-PC deployment profile added as spec §8 |
 
 ---
 

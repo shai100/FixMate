@@ -1,5 +1,7 @@
 # FixMate — Product Specification & System Architecture
-**Version 1.0 · June 2026 · Status: Draft for review**
+**Version 1.1 · June 2026 · Status: Draft for review**
+
+> **v1.1 changes:** Resolved open technology options to single choices (§5.3), made the LLM provider layer explicitly dual-backend (local model for MVP development, Anthropic Claude for production), and added §8 — a local-PC deployment profile (Docker Compose) that runs the entire infrastructure, including a locally hosted LLM on a 4 GB GPU, before any cloud deployment.
 
 ---
 
@@ -133,11 +135,12 @@ Candidate fixes are **never used in answers until approved**. The lifecycle:
                             │
               ┌─────────────▼──────────────┐
               │     LLM Provider Layer     │
-              │  Anthropic API (primary)   │
-              │  · answer composition      │
-              │  · vision (photo diagnosis)│
-              │  · safety pre-screen       │
-              │  abstraction for fallback  │
+              │  pluggable backends:       │
+              │  · Ollama (local, MVP dev) │
+              │  · Anthropic API (prod)    │
+              │  roles: answer composition,│
+              │  vision (photo diagnosis), │
+              │  safety pre-screen         │
               └────────────────────────────┘
 ```
 
@@ -155,23 +158,25 @@ Candidate fixes are **never used in answers until approved**. The lifecycle:
 
 **Conversation & answer logging.** Every answer stores the exact retrieved chunks and model version, enabling regression evaluation, "why did it say that?" investigations, and legal defensibility.
 
-### 5.3 Suggested technology stack
+### 5.3 Technology stack (options resolved in v1.1)
 
-| Layer | Suggestion | Notes |
+Where v1.0 listed alternatives, v1.1 commits to one choice per layer. The deciding criterion throughout: **every component must also run on a single developer PC** (see §8), so the same stack moves from laptop to cloud without substitution.
+
+| Layer | Decision | Rationale |
 |---|---|---|
 | Mobile/web client | React + PWA (Capacitor for app stores later) | One codebase, offline-capable via service worker |
 | Admin console | React + component library | Shares design system with client |
-| API | Node.js (NestJS) or Python (FastAPI) | FastAPI pairs well with the ML-heavy ingestion code |
-| Async workers | Python + Celery/Temporal | Ingestion, OCR, embedding, pack building |
-| Vector DB | Qdrant or pgvector (start) → managed Pinecone/Weaviate at scale | pgvector keeps early ops simple inside Postgres |
-| Keyword search | PostgreSQL full-text or OpenSearch | Hybrid retrieval complement |
-| RDBMS | PostgreSQL (RLS for tenant isolation) | Fixes, states, audit, users |
-| Object storage | S3-compatible | PDFs, figures, offline packs |
-| PDF/OCR | PyMuPDF + Tesseract/cloud OCR; vision-model captioning for figures | Scanned-manual support is a real SMB need |
-| LLM | Anthropic Claude (answers, vision, pre-screen) behind a provider-abstraction layer | Model-agnostic interface protects against cost/capability shifts |
-| Auth | OIDC (Auth0/Keycloak); SAML SSO at Business tier | |
-| Infra | Containerized (k8s or ECS), IaC (Terraform), EU + IL region options | Data-residency matters to OEMs |
-| Observability | OpenTelemetry + structured answer-quality metrics | Track groundedness & helpfulness as first-class SLOs |
+| API | **Python (FastAPI)** | Chosen over NestJS: one language across API and ingestion workers, native async, and the ML/RAG ecosystem (embeddings, rerankers, PyMuPDF) is Python-first |
+| Async workers | **Python + Celery (Redis broker)** | Chosen over Temporal: Celery + Redis is one small container locally; Temporal adds a server cluster we don't need at MVP scale |
+| Vector DB | **pgvector** (→ Qdrant/managed only if ops demands it) | Lives inside the Postgres we already run; per-tenant isolation via RLS on the chunks table; one fewer service everywhere |
+| Keyword search | **PostgreSQL full-text search** (→ OpenSearch only at scale) | Same database, same RLS tenant isolation; ranking is not true BM25 but is an adequate hybrid complement at MVP corpus sizes — `pg_search` (ParadeDB) is the in-Postgres upgrade path to real BM25 before reaching for OpenSearch |
+| RDBMS | PostgreSQL 16 + RLS | Fixes, states, audit, users — plus vectors and keyword index (above) |
+| Object storage | **MinIO (local/self-hosted) → AWS S3 (cloud)** | Identical S3 API in both environments; code never changes |
+| PDF/OCR | **PyMuPDF + Tesseract** (cloud OCR as later opt-in for hard scans) | Fully local, no per-page cost during development; revisit AWS Textract/Google Vision only if scanned-manual quality demands it |
+| LLM | **Dual backend behind the provider-abstraction layer:** Ollama-served local model (MVP/dev — see §8.3) and Anthropic Claude (production) | Claude models are API-only and cannot be self-hosted, so local development requires an open-weight backend; the abstraction (`LLM_PROVIDER=ollama\|anthropic`) makes the switch a config change |
+| Auth | **Keycloak** (OIDC; SAML SSO at Business tier) | Chosen over Auth0: Auth0 is SaaS-only and cannot run on a local PC; Keycloak is a container, covers OIDC + SAML, and avoids per-MAU pricing |
+| Infra | **Docker Compose (local/MVP) → AWS ECS Fargate (cloud), IaC (Terraform)** | AWS has both EU regions and il-central-1 (Tel Aviv) for the IL data-residency requirement; ECS over k8s for lower ops burden at this team size |
+| Observability | **OpenTelemetry collector + Grafana/Prometheus/Loki locally → managed backend in cloud** | Same OTel instrumentation in both; groundedness & helpfulness tracked as first-class SLOs |
 
 ### 5.4 Core data model (simplified)
 
@@ -210,3 +215,61 @@ AuditEvent { actor, entity, action, before, after, timestamp }
 | OEM document copyright | Customers upload under their own license; OEM tier makes the rights-holder the publisher |
 | LLM cost/capability shifts | Provider-abstraction layer; per-tenant token budgets; cache frequent answers |
 | Platform giants bundle "good enough" AI | Win on vertical depth, visual answers, the curated-fix moat, and SMB pricing they can't profitably match |
+
+---
+
+## 8. Local Development & MVP Deployment Profile (added v1.1)
+
+The entire FixMate infrastructure runs on a single developer PC before any cloud deployment. This is a hard requirement of the stack choices in §5.3: no component may be SaaS-only.
+
+### 8.1 Containerization: Docker Compose
+
+**Decision: Docker Compose** (one `docker-compose.yml`, `docker compose up`), not a local Kubernetes distribution and not native installs.
+
+- **Why not native installs:** Postgres + Redis + MinIO + Keycloak installed directly on Windows drift from production immediately and are not reproducible across developer machines.
+- **Why not local Kubernetes (minikube/k3d/kind):** the cloud target is ECS Fargate (§5.3), so local k8s buys parity with nothing while adding cluster ops to every dev day. Revisit only if the cloud target ever becomes Kubernetes.
+- **Podman** is an acceptable drop-in substitute (compose-compatible) for licensing-sensitive environments; Docker Desktop with the WSL2 backend is the default on Windows.
+
+The same container images built locally are what Terraform deploys to ECS — promotion is a registry push, not a rebuild.
+
+### 8.2 Compose service inventory
+
+| Service | Image (indicative) | Role |
+|---|---|---|
+| `postgres` | `pgvector/pgvector:pg16` | RDBMS + RLS, vector index, full-text keyword index, audit log |
+| `redis` | `redis:7` | Celery broker + answer cache |
+| `minio` | `minio/minio` | S3-compatible object storage (PDFs, figures, offline packs) |
+| `api` | project image (FastAPI) | Answer Service, Knowledge Mgmt Service |
+| `worker` | project image (Celery) | Ingestion: PDF parse, OCR, figure extraction, embedding, indexing |
+| `keycloak` | `quay.io/keycloak/keycloak` | OIDC auth (realm-per-environment; org roles per §2) |
+| `ollama` | `ollama/ollama` (GPU) | Local LLM serving (§8.3) |
+| `otel-collector` + `grafana` stack | optional profile | Traces/metrics/logs; same OTel instrumentation as production |
+
+**GPU note (Windows):** GPU passthrough to containers requires Docker Desktop + WSL2 with the NVIDIA CUDA-on-WSL driver. A pragmatic alternative that avoids passthrough entirely: run Ollama **natively on the Windows host** (it gets direct GPU access) and point containers at `http://host.docker.internal:11434`. Either topology is supported; the provider abstraction only sees a base URL.
+
+### 8.3 Local LLM profile (MVP) — 4 GB GPU budget
+
+A 4 GB VRAM card caps generation at ~4B parameters at 4-bit quantization (~2.5 GB weights, leaving headroom for KV cache). Embedding and reranking run on **CPU** so the GPU serves generation only.
+
+| Role | Model | Serving | Why |
+|---|---|---|---|
+| Answer composition (generation) | **Qwen3-4B-Instruct, Q4_K_M** (`ollama pull qwen3:4b`) | Ollama, GPU | Strongest instruction-following and citation discipline in the ≤4B class; usable multilingual coverage for the EN+HE launch requirement; ~2.5 GB fits 4 GB VRAM with KV-cache headroom |
+| Fallback / alternative generation | Llama 3.2 3B Instruct (`llama3.2:3b`) | Ollama, GPU | Slightly smaller and faster; weaker Hebrew |
+| Embeddings | **BGE-M3** (`bge-m3`) | CPU | Multilingual (incl. Hebrew) so EN+HE works without re-ingestion (FR-7); also emits sparse signals useful to hybrid retrieval |
+| Reranker | BGE-reranker-v2-m3 | CPU | Pairs with BGE-M3; runs acceptably on CPU at top-20 candidate depth |
+| Figure captioning (ingestion-time) | Claude vision via API (batch), or `gemma3:4b` locally at reduced quality | API / Ollama | Captioning happens once per document at ingestion, not per answer — low volume makes API use cheap, and caption quality compounds into every future retrieval |
+
+Backend selection is a single environment switch consumed by the provider-abstraction layer:
+
+```env
+LLM_PROVIDER=ollama      # local MVP profile
+LLM_PROVIDER=anthropic   # production profile (Claude via official SDK)
+```
+
+### 8.4 Scope and safety boundary of the local profile
+
+The local model profile is for **development, demos, and the MVP iteration loop**. It does not change the safety posture in §4:
+
+- The groundedness gate (≥95% traceable claims, zero fabricated specs) and the fabrication post-check apply to **whichever backend is active**. A ≤4B model will trip the confidence/escalation path (FR-4) more often — that is the system working as designed, not a defect.
+- **Release-gate evaluation and any pilot with real field technicians runs on the Claude backend** until the local model demonstrably passes the same groundedness and safety evals. Answer-regression baselines (§5.2) are recorded per backend and never compared across backends.
+- The AI safety pre-screen (FR-15) advises a human curator in both profiles; curation rules are backend-independent.
