@@ -122,6 +122,16 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 - **Database credentials:** Use IAM-based auth where possible (AWS RDS IAM, Postgres GCP Cloud SQL auth).
 - **Customer data:** Encrypt at rest (AES-256) and in transit (TLS 1.3). Per-tenant deletion within 30 days of request.
 
+### 4.7 Commit Documentation (Build Log)
+- **Every commit Claude creates gets a companion markdown file in `docs/`**, included in that commit (or an immediate follow-up), describing what was done and how it was verified.
+- **Naming:** `docs/phase-N-<short-name>.md` for plan-phase commits; `docs/<yyyy-mm-dd>-<short-slug>.md` for other commits.
+- **Required content:**
+  - **Header:** commit hash + message, link to the relevant plan/spec section, date.
+  - **What was built** — files created/changed and the design decisions they embody (contracts, constraints, why).
+  - **Verification evidence** — the actual commands run and their real output (test results, healthchecks, DB queries). Never claim verification without pasting the evidence; never fabricate output.
+- **Why:** an audit trail for engineering decisions, mirroring the product's own auditability value — any engineer can reconstruct what was verified and how.
+- Examples: `docs/phase-0-compose-infrastructure.md`, `docs/phase-1-schema-rls.md`.
+
 ---
 
 ## 5. Decision-Making Patterns
@@ -249,6 +259,7 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 |------|--------|--------|
 | 2026-06-12 | Initial | Document created; captured product spec, architecture, and development norms |
 | 2026-06-12 | Spec v1.1 | Resolved open stack options (Celery, Postgres FTS, Keycloak, MinIO→S3, Compose→ECS Fargate); LLM layer made dual-backend (local Ollama model for MVP on 4 GB GPU, Claude for production); local-PC deployment profile added as spec §8 |
+| 2026-06-12 | Build log | Added §4.7: every commit gets a companion `docs/` markdown file with "What was built" + "Verification evidence" |
 
 ---
 
