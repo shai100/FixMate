@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixMate — GUI Design Specification</title>
+<style>
+  :root{
+    --night:#0A0F1A; --surface:#0F172A; --surface2:#162033; --border:#1E293B; --border2:#334155;
+    --txt:#E2E8F0; --txt2:#94A3B8; --txt3:#64748B;
+    --p1:#0EA5E9; --p2:#6366F1;
+    --ok:#22C55E; --okT:#4ADE80; --warn:#EAB308; --warnT:#FACC15; --danger:#EF4444; --dangerT:#F87171; --info:#38BDF8;
+    --lbg:#F8FAFC; --lsurface:#FFFFFF; --lborder:#E2E8F0; --ltxt:#0F172A; --ltxt2:#475569;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter','Noto Sans Hebrew',system-ui,sans-serif;background:#EEF2F7;color:#1E293B;line-height:1.55;padding:32px 16px}
+  .doc{max-width:1080px;margin:0 auto}
+  .docHead{background:linear-gradient(135deg,#0A0F1A,#111B33);border-radius:20px;padding:36px;color:#fff;margin-bottom:28px}
+  .docHead h1{font-size:26px;font-weight:800;letter-spacing:.3px}
+  .docHead .sub{color:#94A3B8;font-size:13px;margin-top:6px}
+  .logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:14px}
+  .logoMark{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-size:20px}
+  section{background:#fff;border-radius:18px;padding:28px;margin-bottom:24px;border:1px solid #E2E8F0}
+  h2{font-size:19px;font-weight:800;margin-bottom:4px;color:#0F172A}
+  h2 .num{color:#6366F1;margin-right:6px}
+  .lead{color:#64748B;font-size:13.5px;margin-bottom:20px}
+  h3{font-size:14px;font-weight:700;margin:22px 0 10px;color:#334155;text-transform:uppercase;letter-spacing:.6px}
+  p{font-size:13.5px;color:#475569;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0}
+  th{text-align:left;color:#64748B;font-weight:700;padding:7px 10px;border-bottom:2px solid #E2E8F0;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  td{padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#334155;vertical-align:top}
+  code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;background:#F1F5F9;border-radius:5px;padding:1px 6px;color:#4F46E5}
+  /* swatches */
+  .swGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .sw{border:1px solid #E2E8F0;border-radius:12px;overflow:hidden}
+  .swC{height:54px}
+  .swI{padding:8px 10px;font-size:11px}
+  .swI b{display:block;font-size:12px;color:#0F172A}
+  .swI span{color:#64748B;font-family:'JetBrains Mono',monospace;font-size:10.5px}
+  /* typo samples */
+  .typeRow{display:flex;align-items:baseline;gap:16px;padding:9px 0;border-bottom:1px dashed #E2E8F0}
+  .typeRow .spec{width:230px;flex-shrink:0;font-size:11px;color:#64748B;font-family:'JetBrains Mono',monospace}
+  /* component zone */
+  .dark{background:var(--night);border-radius:14px;padding:22px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .btn{border:none;border-radius:12px;padding:12px 20px;font-size:13.5px;font-weight:700;font-family:inherit;color:#fff;background:linear-gradient(135deg,var(--p1),var(--p2));display:inline-flex;align-items:center;gap:7px}
+  .btnSec{background:transparent;border:1px solid var(--border2);color:var(--txt2)}
+  .btnDanger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:var(--dangerT)}
+  .btnOk{background:linear-gradient(135deg,#22C55E,#16A34A)}
+  .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700}
+  .bHigh{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.5);color:var(--okT)}
+  .bMed{background:rgba(250,204,21,.12);border:1px solid rgba(234,179,8,.5);color:var(--warnT)}
+  .bLow{background:rgba(248,113,113,.12);border:1px solid rgba(239,68,68,.5);color:var(--dangerT)}
+  .bFix{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.4);color:var(--okT)}
+  .bSrc{background:#0A0F1A;border:1px solid var(--border2);color:#7DD3FC;border-radius:8px}
+  .safety{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.4);border-radius:12px;padding:10px 13px;color:#FCA5A5;font-size:12px;display:flex;gap:8px;max-width:340px}
+  .stepDemo{display:flex;gap:11px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px;max-width:360px}
+  .stepN{width:24px;height:24px;border-radius:8px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);color:var(--info);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .stateTag{border-radius:7px;padding:3px 9px;font-size:10.5px;font-weight:800;letter-spacing:.4px}
+  /* phone mockups */
+  .mockRow{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;margin-top:8px}
+  .phone{width:248px;border-radius:30px;background:#000;padding:9px;box-shadow:0 18px 40px rgba(2,6,23,.35);flex-shrink:0}
+  .phScreen{background:var(--night);border-radius:23px;overflow:hidden;height:496px;display:flex;flex-direction:column;position:relative;font-size:10px;color:var(--txt)}
+  .notch{height:18px;display:flex;justify-content:center;align-items:flex-end}
+  .notch i{width:74px;height:13px;background:#000;border-radius:0 0 12px 12px}
+  .cap{ text-align:center;font-size:11.5px;font-weight:700;color:#334155;margin-top:10px}
+  .cap span{display:block;font-weight:400;color:#94A3B8;font-size:10.5px;margin-top:2px;line-height:1.45}
+  .ph-h{padding:8px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+  .miniLogo{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-size:10px}
+  .gBtn{background:linear-gradient(135deg,var(--p1),var(--p2));border-radius:10px;color:#fff;font-weight:700;text-align:center;padding:9px;font-size:10.5px}
+  .inp{background:#0A0F1A;border:1px solid var(--border2);border-radius:9px;padding:8px 10px;color:var(--txt3);font-size:9.5px}
+  .eqCard{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:9px}
+  .eqIc{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+  .uMsg{align-self:flex-end;background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;border-radius:11px 11px 3px 11px;padding:7px 9px;font-size:9.5px;max-width:78%}
+  .aCard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:9px;font-size:9.5px}
+  .figBox{background:#0A0F1A;border:1px solid var(--border2);border-radius:8px;padding:6px;margin-top:6px}
+  .chipS{display:inline-flex;align-items:center;gap:4px;font-size:8px;border-radius:6px;padding:2.5px 7px}
+  /* browser mockups */
+  .browser{border-radius:14px;overflow:hidden;border:1px solid #CBD5E1;box-shadow:0 14px 34px rgba(2,6,23,.18);background:#fff;margin-top:8px}
+  .bBar{background:#E8EDF4;padding:8px 12px;display:flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .url{flex:1;background:#fff;border-radius:7px;font-size:10px;color:#64748B;padding:4px 10px;margin-left:8px;font-family:'JetBrains Mono',monospace}
+  .webBody{display:flex;min-height:330px;font-size:10.5px}
+  .sideNav{width:158px;background:#0F172A;color:#94A3B8;padding:12px 0;flex-shrink:0}
+  .navIt{padding:8px 14px;display:flex;align-items:center;gap:8px;font-size:10.5px}
+  .navIt.on{background:rgba(99,102,241,.15);color:#C7D2FE;border-right:2px solid #6366F1;font-weight:700}
+  .webMain{flex:1;background:var(--lbg);padding:16px}
+  .wCard{background:#fff;border:1px solid var(--lborder);border-radius:12px;padding:12px}
+  .kpi{background:#fff;border:1px solid var(--lborder);border-radius:12px;padding:10px 12px;flex:1}
+  .kpi b{font-size:17px;color:#0F172A;display:block}
+  .kpi span{font-size:9.5px;color:#64748B}
+  .qRow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #F1F5F9;font-size:10px}
+  .note{background:#F0F9FF;border:1px solid #BAE6FD;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#0369A1;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <div class="docHead">
+    <div class="logo"><div class="logoMark">🔧</div><div style="font-weight:800;font-size:20px">FixMate</div></div>
+    <h1>GUI Design Specification — Web & Mobile</h1>
+    <div class="sub">Version 1.0 · June 2026 · Covers: Technician Mobile App (dark) + Admin/Curator Web Console (light) · All illustrations rendered live in this document</div>
+  </div>
+
+  <!-- 1. PRINCIPLES -->
+  <section>
+    <h2><span class="num">1.</span>Design Principles</h2>
+    <p class="lead">Every visual decision serves a technician standing in front of a broken machine.</p>
+    <table>
+      <tr><th style="width:190px">Principle</th><th>Implication</th></tr>
+      <tr><td><b>Glanceable in sunlight & basements</b></td><td>High-contrast dark theme on mobile (OLED-friendly), minimum 13px body text, strong color coding for status</td></tr>
+      <tr><td><b>Gloves-first</b></td><td>Touch targets ≥ 48×48px, generous spacing, voice input always one tap away, no hover-dependent actions on mobile</td></tr>
+      <tr><td><b>Safety is loudest</b></td><td>Safety warnings use the only red banner in the system, always positioned above repair steps, never collapsible</td></tr>
+      <tr><td><b>Trust through provenance</b></td><td>Every claim shows its source chip (manual page or field-verified badge); confidence badge tops every answer</td></tr>
+      <tr><td><b>Two products, one family</b></td><td>Mobile app = dark, focused, single-column. Web console = light, dense, data-oriented. Shared palette, type, radii, and components</td></tr>
+    </table>
+  </section>
+
+  <!-- 2. COLORS -->
+  <section>
+    <h2><span class="num">2.</span>Color System</h2>
+    <p class="lead">Two themes from one palette. Dark "Night" theme for the technician app; light "Console" theme for admin/curator web. Semantic colors are identical in both.</p>
+
+    <h3>2.1 Brand & Night theme (mobile)</h3>
+    <div class="swGrid">
+      <div class="sw"><div class="swC" style="background:linear-gradient(135deg,#0EA5E9,#6366F1)"></div><div class="swI"><b>Primary Gradient</b><span>#0EA5E9 → #6366F1</span>Buttons, user bubbles, logo</div></div>
+      <div class="sw"><div class="swC" style="background:#0A0F1A"></div><div class="swI"><b>Night / Background</b><span>#0A0F1A</span>App background</div></div>
+      <div class="sw"><div class="swC" style="background:#0F172A"></div><div class="swI"><b>Surface</b><span>#0F172A</span>Cards, headers, bars</div></div>
+      <div class="sw"><div class="swC" style="background:#162033"></div><div class="swI"><b>Surface-2</b><span>#162033</span>Elevated/hover surfaces</div></div>
+      <div class="sw"><div class="swC" style="background:#1E293B"></div><div class="swI"><b>Border</b><span>#1E293B</span>Card borders, dividers</div></div>
+      <div class="sw"><div class="swC" style="background:#E2E8F0"></div><div class="swI"><b>Text / Primary</b><span>#E2E8F0</span>Body text on dark</div></div>
+      <div class="sw"><div class="swC" style="background:#94A3B8"></div><div class="swI"><b>Text / Secondary</b><span>#94A3B8</span>Step details, meta</div></div>
+      <div class="sw"><div class="swC" style="background:#64748B"></div><div class="swI"><b>Text / Tertiary</b><span>#64748B</span>Hints, timestamps</div></div>
+    </div>
+
+    <h3>2.2 Semantic colors (both themes)</h3>
+    <div class="swGrid">
+      <div class="sw"><div class="swC" style="background:#22C55E"></div><div class="swI"><b>Success / Verified</b><span>#22C55E · tint #4ADE80</span>High confidence, approved fixes, "helped"</div></div>
+      <div class="sw"><div class="swC" style="background:#EAB308"></div><div class="swI"><b>Warning</b><span>#EAB308 · tint #FACC15</span>Medium confidence, pending review</div></div>
+      <div class="sw"><div class="swC" style="background:#EF4444"></div><div class="swI"><b>Danger / Safety</b><span>#EF4444 · tint #F87171</span>Safety banners, low confidence, unsafe flag — <b>reserved, never decorative</b></div></div>
+      <div class="sw"><div class="swC" style="background:#38BDF8"></div><div class="swI"><b>Info / Source</b><span>#38BDF8 · #7DD3FC</span>Manual citations, links, figures</div></div>
+    </div>
+
+    <h3>2.3 Console (light) theme — web admin</h3>
+    <div class="swGrid">
+      <div class="sw"><div class="swC" style="background:#F8FAFC;border-bottom:1px solid #eee"></div><div class="swI"><b>Console BG</b><span>#F8FAFC</span></div></div>
+      <div class="sw"><div class="swC" style="background:#FFFFFF;border-bottom:1px solid #eee"></div><div class="swI"><b>Console Surface</b><span>#FFFFFF</span>Cards, tables</div></div>
+      <div class="sw"><div class="swC" style="background:#E2E8F0"></div><div class="swI"><b>Console Border</b><span>#E2E8F0</span></div></div>
+      <div class="sw"><div class="swC" style="background:#0F172A"></div><div class="swI"><b>Console Sidebar</b><span>#0F172A</span>Keeps brand continuity with app</div></div>
+    </div>
+    <p style="margin-top:12px">Rules: semantic red is <b>only</b> for safety/danger states. Equipment profiles get an accent color from an 8-color set (sky #38BDF8, orange #FB923C, violet #A78BFA, teal #2DD4BF, rose #FB7185, lime #A3E635, amber #FBBF24, indigo #818CF8) used for icons, active tabs, and step numbers — never for text bodies. All text/background pairs meet WCAG 2.1 AA (≥4.5:1).</p>
+  </section>
+
+  <!-- 3. TYPOGRAPHY -->
+  <section>
+    <h2><span class="num">3.</span>Typography</h2>
+    <p class="lead"><b>Inter</b> (UI, Latin) + <b>Noto Sans Hebrew</b> (Hebrew, auto-fallback in the same stack) + <b>JetBrains Mono</b> (error codes, part numbers, values). Variable fonts, self-hosted. Hebrew text triggers full RTL mirroring (§8).</p>
+    <div>
+      <div class="typeRow"><div class="spec">Display · 24/32 · 800</div><div style="font-size:24px;font-weight:800">Review Queue</div></div>
+      <div class="typeRow"><div class="spec">H1 · 18/26 · 700</div><div style="font-size:18px;font-weight:700">AquaPure RO-5000</div></div>
+      <div class="typeRow"><div class="spec">H2 / Card title · 15/22 · 600</div><div style="font-size:15px;font-weight:600">Check concentrate valve position</div></div>
+      <div class="typeRow"><div class="spec">Body · 14/21 · 400 (mobile min 13px)</div><div style="font-size:14px">Run the CIP cleaning cycle with low-pH cleaner if pressure drop exceeds 15%.</div></div>
+      <div class="typeRow"><div class="spec">Caption / Meta · 11/16 · 500</div><div style="font-size:11px;color:#64748B">Approved by D. Levi · 2026-06-08</div></div>
+      <div class="typeRow"><div class="spec">Mono / Values · 13 · 500</div><div style="font-family:'JetBrains Mono',monospace;font-size:13px">E47 · PN AP-CF-505 · 2.1 mL/min · 16 bar</div></div>
+      <div class="typeRow"><div class="spec">Hebrew sample · RTL</div><div style="font-size:14px" dir="rtl">בדוק את מצב שסתום הרכז — איור 12, עמ׳ 41</div></div>
+    </div>
+  </section>
+
+  <!-- 4. SHAPE / SPACING / ICONS -->
+  <section>
+    <h2><span class="num">4.</span>Shape, Spacing & Iconography</h2>
+    <table>
+      <tr><th style="width:190px">Token</th><th>Value</th></tr>
+      <tr><td>Spacing scale</td><td>4px base: <code>4 · 8 · 12 · 16 · 24 · 32 · 48</code></td></tr>
+      <tr><td>Corner radius</td><td><code>8px</code> chips/inputs-small · <code>12px</code> buttons/inputs · <code>16px</code> cards · <code>999px</code> pills/badges · message bubbles 16px with 4px "tail" corner</td></tr>
+      <tr><td>Touch targets</td><td>≥ 48×48px mobile, ≥ 36px web; 8px minimum between targets</td></tr>
+      <tr><td>Elevation</td><td>Dark theme: elevation by surface color (no shadows). Light theme: <code>0 1px 3px rgba(2,6,23,.08)</code> cards, <code>0 8px 24px rgba(2,6,23,.14)</code> modals</td></tr>
+      <tr><td>Icons</td><td><b>Lucide</b> set, 1.5px stroke; sizes 12 (chips) / 16 (inline) / 20 (nav) / 28 (equipment). Never icon-only for destructive actions — always icon + label</td></tr>
+      <tr><td>Motion</td><td>150ms ease for hover/press, 250ms for panel slides; answer text streams in; respect <code>prefers-reduced-motion</code></td></tr>
+      <tr><td>Voice state</td><td>Mic button pulses with primary-gradient ring while listening</td></tr>
+    </table>
+  </section>
+
+  <!-- 5. COMPONENTS -->
+  <section>
+    <h2><span class="num">5.</span>Core Components (rendered)</h2>
+    <p class="lead">The shared component library, shown on the Night theme.</p>
+
+    <h3>5.1 Buttons</h3>
+    <div class="dark">
+      <button class="btn">▶ Primary — Ask / Save</button>
+      <button class="btn btnSec">Secondary — Cancel</button>
+      <button class="btn btnOk">✓ Approve fix</button>
+      <button class="btn btnDanger">✕ Reject</button>
+      <button class="btn" style="border-radius:999px;width:48px;height:48px;padding:0;justify-content:center">🎤</button>
+    </div>
+
+    <h3>5.2 Confidence badges — top of every answer</h3>
+    <div class="dark">
+      <span class="badge bHigh">✓ High confidence — grounded in manual</span>
+      <span class="badge bMed">◐ Medium — verify on site</span>
+      <span class="badge bLow">⚠ Low — escalate to senior tech</span>
+    </div>
+
+    <h3>5.3 Safety banner — reserved red, always above steps</h3>
+    <div class="dark">
+      <div class="safety">⚠ <span>System operates at 16 bar. Depressurize via valve V-3 before opening membrane housings.</span></div>
+    </div>
+
+    <h3>5.4 Repair step card + source chips</h3>
+    <div class="dark">
+      <div class="stepDemo">
+        <div class="stepN">2</div>
+        <div>
+          <div style="font-weight:600;font-size:13px;color:var(--txt)">Check concentrate valve position</div>
+          <div style="font-size:12px;color:var(--txt2);margin-top:2px">Confirm the valve is fully open. A partially closed valve mimics membrane fouling.</div>
+          <div style="display:flex;gap:6px;margin-top:7px">
+            <span class="badge bSrc" style="font-size:10px;padding:3px 8px">📖 Fig 12 · p.41</span>
+            <span class="badge bFix" style="font-size:10px;padding:3px 8px">💡 Field-verified</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>5.5 Curation state tags (web console)</h3>
+    <div class="dark" style="background:#F8FAFC;border:1px solid #E2E8F0">
+      <span class="stateTag" style="background:#EFF6FF;color:#2563EB;border:1px solid #BFDBFE">SUBMITTED</span>
+      <span class="stateTag" style="background:#FEFCE8;color:#A16207;border:1px solid #FDE68A">PENDING REVIEW</span>
+      <span class="stateTag" style="background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0">APPROVED · ACTIVE</span>
+      <span class="stateTag" style="background:#FFF1F2;color:#BE123C;border:1px solid #FECDD3">REJECTED</span>
+      <span class="stateTag" style="background:#450A0A;color:#FCA5A5;border:1px solid #7F1D1D">⚠ FLAGGED UNSAFE</span>
+      <span class="stateTag" style="background:#F1F5F9;color:#64748B;border:1px solid #E2E8F0">RETIRED</span>
+    </div>
+  </section>
+
+  <!-- 6. MOBILE SCREENS -->
+  <section>
+    <h2><span class="num">6.</span>Mobile App — Screen Specifications (illustrated)</h2>
+    <p class="lead">Single-column, dark, thumb-reachable. Bottom 30% of the screen owns all primary actions. Pages: Sign-in, Equipment Select, Chat & Answer, Fix Submission, Offline Packs (+ Settings/Profile, standard patterns).</p>
+
+    <div class="mockRow">
+
+      <!-- LOGIN -->
+      <div>
+        <div class="phone"><div class="phScreen">
+          <div class="notch"><i></i></div>
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:20px;gap:9px">
+            <div style="text-align:center;margin-bottom:8px">
+              <div class="miniLogo" style="width:44px;height:44px;border-radius:13px;font-size:20px;margin:0 auto 8px">🔧</div>
+              <div style="font-weight:800;font-size:15px">FixMate</div>
+              <div style="color:var(--txt3);font-size:9px">Your AI repair copilot</div>
+            </div>
+            <div class="inp">Work email</div>
+            <div class="inp">Password</div>
+            <div class="gBtn">Sign in</div>
+            <div style="text-align:center;color:var(--txt3);font-size:8.5px">— or —</div>
+            <div class="inp" style="text-align:center;color:var(--txt2)">🏢 Sign in with company SSO</div>
+            <div style="text-align:center;color:#7DD3FC;font-size:8.5px">Scan QR from your admin invite</div>
+          </div>
+        </div></div>
+        <div class="cap">6.1 Sign-in<span>Email/password + SSO + QR invite. No self-signup on mobile — seats come from the org.</span></div>
+      </div>
+
+      <!-- EQUIPMENT SELECT -->
+      <div>
+        <div class="phone"><div class="phScreen">
+          <div class="notch"><i></i></div>
+          <div class="ph-h"><div class="miniLogo">🔧</div><b style="font-size:10.5px">Select equipment</b><span style="margin-left:auto;color:var(--txt3)">⚙</span></div>
+          <div style="padding:10px;display:flex;flex-direction:column;gap:7px">
+            <div class="inp">🔍 Search model…</div>
+            <div class="gBtn" style="display:flex;align-items:center;justify-content:center;gap:6px">📷 Scan nameplate / QR</div>
+            <div style="color:var(--txt3);font-size:8.5px;margin-top:3px">RECENT</div>
+            <div class="eqCard"><div class="eqIc" style="background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4)">💧</div><div><b style="font-size:10px">AquaPure RO-5000</b><div style="color:var(--txt3);font-size:8px">RO water treatment · 3 manuals · 4 verified fixes</div></div><span style="margin-left:auto;color:var(--txt3)">›</span></div>
+            <div class="eqCard"><div class="eqIc" style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.4)">🌀</div><div><b style="font-size:10px">ThermoMax RTU-80</b><div style="color:var(--txt3);font-size:8px">Rooftop HVAC · 2 manuals · 7 verified fixes</div></div><span style="margin-left:auto;color:var(--txt3)">›</span></div>
+            <div class="eqCard"><div class="eqIc" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.4)">🖨</div><div><b style="font-size:10px">PrintPro X900</b><div style="color:var(--txt3);font-size:8px">Label printer · 1 manual · 2 verified fixes</div></div><span style="margin-left:auto;color:var(--txt3)">›</span></div>
+            <div style="display:flex;gap:5px;margin-top:2px"><span class="chipS" style="border:1px solid var(--border2);color:var(--txt2)">⬇ Offline ready</span><span class="chipS" style="border:1px solid rgba(34,197,94,.4);color:var(--okT)">💡 13 team fixes</span></div>
+          </div>
+        </div></div>
+        <div class="cap">6.2 Equipment Select<span>Camera-first identification (nameplate/QR). Cards show KB richness to build trust before asking.</span></div>
+      </div>
+
+      <!-- CHAT ANSWER -->
+      <div>
+        <div class="phone"><div class="phScreen">
+          <div class="notch"><i></i></div>
+          <div class="ph-h"><span style="color:var(--txt3)">‹</span><div class="eqIc" style="width:20px;height:20px;font-size:10px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4)">💧</div><b style="font-size:10px">AquaPure RO-5000</b><span style="margin-left:auto;color:var(--txt3)">⋯</span></div>
+          <div style="flex:1;padding:9px;display:flex;flex-direction:column;gap:7px;overflow:hidden">
+            <div class="uMsg">Unit shows error E47, what do I do?</div>
+            <div class="aCard">
+              <span class="chipS" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.5);color:var(--okT)">✓ High confidence</span>
+              <div style="font-weight:600;margin-top:5px;font-size:9.5px">E47 = high differential pressure — usually membrane fouling.</div>
+              <div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.4);border-radius:7px;padding:5px 7px;margin-top:5px;color:#FCA5A5;font-size:8.5px">⚠ Depressurize via valve V-3 before opening housings — 16 bar.</div>
+              <div style="display:flex;gap:6px;margin-top:6px"><div class="stepN" style="width:16px;height:16px;font-size:8px;border-radius:5px">1</div><div style="font-size:8.5px"><b>Check concentrate valve</b><div style="color:var(--txt2)">Confirm fully open.</div></div></div>
+              <div class="figBox"><div style="height:46px;border-radius:5px;background:repeating-linear-gradient(45deg,#162033,#162033 7px,#1B2740 7px,#1B2740 14px);display:flex;align-items:center;justify-content:center;color:#7DD3FC;font-size:8px">［ Fig 12 — valve location diagram ］</div><div style="color:#7DD3FC;font-size:7.5px;margin-top:3px">📖 Service Manual Rev 4.2 · p.41 · tap to open</div></div>
+              <div style="display:flex;gap:6px;margin-top:6px"><div class="stepN" style="width:16px;height:16px;font-size:8px;border-radius:5px">2</div><div style="font-size:8.5px"><b>Run CIP cleaning cycle</b><div style="color:var(--txt2)">Low-pH cleaner, §6.3 p.58.</div></div></div>
+              <div style="border-top:1px solid var(--border);margin-top:7px;padding-top:6px;display:flex;align-items:center;gap:5px;font-size:8.5px"><span style="color:var(--txt2);font-weight:700">Did it help?</span><span class="chipS" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.4);color:var(--okT)">👍 Yes</span><span class="chipS" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.35);color:var(--dangerT)">👎 No</span></div>
+            </div>
+          </div>
+          <div style="padding:8px;border-top:1px solid var(--border);display:flex;gap:5px;align-items:center">
+            <div class="inp" style="flex:1">Describe the issue…</div>
+            <div style="width:28px;height:28px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px">📷</div>
+            <div style="width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--p1),var(--p2));display:flex;align-items:center;justify-content:center;font-size:11px">🎤</div>
+          </div>
+        </div></div>
+        <div class="cap">6.3 Chat & Answer (core screen)<span>Confidence → safety → steps with inline figure images from the manual → feedback. Camera & mic in the input bar.</span></div>
+      </div>
+
+      <!-- FIX SUBMISSION -->
+      <div>
+        <div class="phone"><div class="phScreen">
+          <div class="notch"><i></i></div>
+          <div class="ph-h"><span style="color:var(--txt3)">‹</span><b style="font-size:10.5px">What solved it?</b></div>
+          <div style="padding:10px;display:flex;flex-direction:column;gap:8px">
+            <div style="background:rgba(250,204,21,.07);border:1px solid rgba(234,179,8,.35);border-radius:9px;padding:7px;color:var(--warnT);font-size:8.5px">💡 Your fix helps the next technician — after a senior tech approves it.</div>
+            <div style="color:var(--txt3);font-size:8px">ORIGINAL PROBLEM</div>
+            <div class="aCard" style="font-size:8.5px;color:var(--txt2)">"Unit shows error E47" · answer didn't resolve</div>
+            <div style="color:var(--txt3);font-size:8px">YOUR SOLUTION</div>
+            <div class="inp" style="height:74px;color:var(--txt)">The concentrate valve was fine — real cause was a kinked permeate line behind the frame. Re-routed it and pressure normalized within 5 min.</div>
+            <div class="inp" style="display:flex;align-items:center;gap:5px;justify-content:center;color:var(--txt2)">📷 Add photo (optional)</div>
+            <div class="gBtn" style="background:linear-gradient(135deg,#22C55E,#16A34A)">💾 Submit for review</div>
+            <div style="text-align:center;color:var(--txt3);font-size:7.5px">Status will appear in your profile: Pending → Approved/Rejected</div>
+          </div>
+        </div></div>
+        <div class="cap">6.4 Fix Submission<span>Reached from "👎 No". Sets expectation explicitly: visible to others only after curator approval.</span></div>
+      </div>
+
+      <!-- OFFLINE -->
+      <div>
+        <div class="phone"><div class="phScreen">
+          <div class="notch"><i></i></div>
+          <div class="ph-h"><span style="color:var(--txt3)">‹</span><b style="font-size:10.5px">Offline packs</b></div>
+          <div style="padding:10px;display:flex;flex-direction:column;gap:7px">
+            <div style="background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.3);border-radius:9px;padding:7px;color:#7DD3FC;font-size:8.5px">📶 Packs answer from cached manual sections & approved fixes when you have no signal.</div>
+            <div class="eqCard"><div class="eqIc" style="background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4)">💧</div><div style="flex:1"><b style="font-size:10px">AquaPure RO-5000</b><div style="color:var(--txt3);font-size:8px">142 MB · synced 2h ago</div><div style="height:4px;background:var(--border);border-radius:3px;margin-top:4px"><div style="width:100%;height:4px;background:linear-gradient(90deg,var(--p1),var(--p2));border-radius:3px"></div></div></div><span class="chipS" style="border:1px solid rgba(34,197,94,.4);color:var(--okT)">✓</span></div>
+            <div class="eqCard"><div class="eqIc" style="background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.4)">🌀</div><div style="flex:1"><b style="font-size:10px">ThermoMax RTU-80</b><div style="color:var(--txt3);font-size:8px">96 MB · downloading…</div><div style="height:4px;background:var(--border);border-radius:3px;margin-top:4px"><div style="width:55%;height:4px;background:linear-gradient(90deg,var(--p1),var(--p2));border-radius:3px"></div></div></div><span class="chipS" style="border:1px solid var(--border2);color:var(--txt2)">55%</span></div>
+            <div style="color:var(--txt3);font-size:8px;margin-top:2px">2 questions queued — will sync when online</div>
+          </div>
+        </div></div>
+        <div class="cap">6.5 Offline Packs (Phase 2)<span>Per-equipment bundles; queued questions sync automatically.</span></div>
+      </div>
+    </div>
+
+    <div class="note"><b>Also standard (not illustrated):</b> Profile & my-submissions screen (fix statuses with state tags from §5.5), notification center, and settings (language EN/HE, voice, text size up to 130%).</div>
+  </section>
+
+  <!-- 7. WEB SCREENS -->
+  <section>
+    <h2><span class="num">7.</span>Web Console — Screen Specifications (illustrated)</h2>
+    <p class="lead">Light theme, dark sidebar (brand continuity), 12-column grid, min width 1024px (tablet-friendly). Pages: Dashboard, Review Queue, Fix Review Detail, Knowledge Base, Equipment Profiles, Users & Roles, Settings. The three defining screens are illustrated.</p>
+
+    <h3>7.1 Review Queue — the curator's home</h3>
+    <div class="browser">
+      <div class="bBar"><span class="dot" style="background:#FB7185"></span><span class="dot" style="background:#FBBF24"></span><span class="dot" style="background:#34D399"></span><span class="url">console.fixmate.app/review</span></div>
+      <div class="webBody">
+        <div class="sideNav">
+          <div style="padding:0 14px 12px;display:flex;align-items:center;gap:7px"><div class="miniLogo">🔧</div><b style="color:#fff;font-size:11px">FixMate</b></div>
+          <div class="navIt">▦ Dashboard</div>
+          <div class="navIt on">✓ Review queue <span style="margin-left:auto;background:#EF4444;color:#fff;border-radius:999px;font-size:8px;padding:1px 6px;font-weight:800">3</span></div>
+          <div class="navIt">📚 Knowledge base</div>
+          <div class="navIt">🛠 Equipment</div>
+          <div class="navIt">👥 Users & roles</div>
+          <div class="navIt">⚙ Settings</div>
+        </div>
+        <div class="webMain">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b style="font-size:14px;color:#0F172A">Review queue</b><div style="display:flex;gap:6px"><span class="stateTag" style="background:#FEFCE8;color:#A16207;border:1px solid #FDE68A">Pending 3</span><span class="stateTag" style="background:#F1F5F9;color:#64748B;border:1px solid #E2E8F0">All 41</span></div></div>
+          <div class="wCard" style="padding:0">
+            <div class="qRow"><span>💧</span><div style="flex:1"><b>Kinked permeate line caused E47, not fouling</b><div style="color:#94A3B8;font-size:9px">AquaPure RO-5000 · by Y. Cohen · 2h ago</div></div><span class="stateTag" style="background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA">⚠ AI: check safety steps</span><span class="stateTag" style="background:#FEFCE8;color:#A16207;border:1px solid #FDE68A">PENDING</span><b style="color:#6366F1">Review ›</b></div>
+            <div class="qRow"><span>🌀</span><div style="flex:1"><b>F08 recurs if belt replaced without pulley alignment</b><div style="color:#94A3B8;font-size:9px">ThermoMax RTU-80 · by M. Peretz · 5h ago</div></div><span class="stateTag" style="background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0">AI: no flags</span><span class="stateTag" style="background:#FEFCE8;color:#A16207;border:1px solid #FDE68A">PENDING</span><b style="color:#6366F1">Review ›</b></div>
+            <div class="qRow" style="border-bottom:none"><span>🖨</span><div style="flex:1"><b>0x4F gone after firmware 3.1.2 update</b><div style="color:#94A3B8;font-size:9px">PrintPro X900 · by D. Mizrahi · 1d ago</div></div><span class="stateTag" style="background:#F0FDF4;color:#15803D;border:1px solid #BBF7D0">AI: no flags</span><span class="stateTag" style="background:#FEFCE8;color:#A16207;border:1px solid #FDE68A">PENDING</span><b style="color:#6366F1">Review ›</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:8px">Spec: sortable by age/equipment/AI-flag severity; red badge count mirrors mobile push; bulk actions disabled by design — every fix is reviewed individually.</p>
+
+    <h3>7.2 Fix Review Detail — the approval decision</h3>
+    <div class="browser">
+      <div class="bBar"><span class="dot" style="background:#FB7185"></span><span class="dot" style="background:#FBBF24"></span><span class="dot" style="background:#34D399"></span><span class="url">console.fixmate.app/review/fx-2841</span></div>
+      <div class="webBody">
+        <div class="webMain" style="display:flex;gap:12px">
+          <div style="flex:1.2;display:flex;flex-direction:column;gap:9px">
+            <div class="wCard"><div style="font-size:9px;color:#94A3B8;font-weight:700">ORIGINAL QUESTION</div><div style="font-size:11px;margin-top:3px">"Unit shows error E47, what do I do?"</div></div>
+            <div class="wCard"><div style="font-size:9px;color:#94A3B8;font-weight:700">ANSWER GIVEN (didn't help)</div><div style="font-size:10px;margin-top:3px;color:#475569">Membrane fouling diagnosis → valve check → CIP cycle…</div></div>
+            <div class="wCard" style="border-color:#BBF7D0;background:#F0FDF4"><div style="font-size:9px;color:#15803D;font-weight:700">PROPOSED FIX — Y. Cohen</div><div style="font-size:10.5px;margin-top:3px">"Concentrate valve was fine — real cause was a kinked permeate line behind the frame. Re-routed it; pressure normalized in 5 min."</div><div style="font-size:9px;color:#15803D;margin-top:4px">📷 1 photo attached</div></div>
+            <div class="wCard"><div style="font-size:9px;color:#94A3B8;font-weight:700">RELEVANT MANUAL EXCERPTS</div><div style="font-size:9.5px;color:#475569;margin-top:3px">§4.1 p.40 — E47 causes table · Fig 12 p.41 — valve location</div></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:9px">
+            <div class="wCard" style="border-color:#FED7AA;background:#FFF7ED">
+              <div style="font-size:9px;color:#C2410C;font-weight:800">🤖 AI SAFETY PRE-SCREEN — advisory only</div>
+              <div style="font-size:10px;color:#7C2D12;margin-top:4px">⚠ Fix involves working near pressurized lines but does not mention depressurizing via valve V-3 (manual p.12). Suggest adding the depressurization step.</div>
+              <div style="font-size:10px;color:#15803D;margin-top:4px">✓ No contradiction with manual · ✓ No electrical/chemical hazard detected</div>
+            </div>
+            <div class="wCard">
+              <div style="font-size:9px;color:#94A3B8;font-weight:700">CURATOR ACTIONS</div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:7px">
+                <div style="background:linear-gradient(135deg,#22C55E,#16A34A);color:#fff;border-radius:9px;text-align:center;padding:7px;font-weight:700;font-size:10.5px">✓ Approve</div>
+                <div style="border:1px solid #6366F1;color:#4F46E5;border-radius:9px;text-align:center;padding:7px;font-weight:700;font-size:10.5px">✎ Edit & approve (add safety step)</div>
+                <div style="border:1px solid #FCA5A5;color:#DC2626;border-radius:9px;text-align:center;padding:7px;font-weight:700;font-size:10.5px">✕ Reject with reason</div>
+                <div style="background:#450A0A;color:#FCA5A5;border-radius:9px;text-align:center;padding:7px;font-weight:700;font-size:10.5px">⚠ Flag unsafe</div>
+              </div>
+              <div style="font-size:8.5px;color:#94A3B8;margin-top:7px">Audit: every action logs reviewer, timestamp, and diff. Two-reviewer rule: OFF for this category.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:8px">Spec: split layout — evidence left, judgment right. "Edit & approve" opens the fix in an editor pre-filled with the AI's suggested safety addition (curator must explicitly accept). Approve is visually dominant but never pre-selected.</p>
+
+    <h3>7.3 Dashboard — knowledge health at a glance</h3>
+    <div class="browser">
+      <div class="bBar"><span class="dot" style="background:#FB7185"></span><span class="dot" style="background:#FBBF24"></span><span class="dot" style="background:#34D399"></span><span class="url">console.fixmate.app/dashboard</span></div>
+      <div class="webBody">
+        <div class="webMain">
+          <div style="display:flex;gap:9px;margin-bottom:10px">
+            <div class="kpi"><b>312</b><span>Questions this week</span></div>
+            <div class="kpi"><b style="color:#15803D">87%</b><span>Helpfulness rate</span></div>
+            <div class="kpi"><b style="color:#A16207">3</b><span>Fixes pending review</span></div>
+            <div class="kpi"><b style="color:#DC2626">11</b><span>Low-confidence answers</span></div>
+          </div>
+          <div style="display:flex;gap:9px">
+            <div class="wCard" style="flex:1.4">
+              <div style="font-size:9px;color:#94A3B8;font-weight:700;margin-bottom:6px">QUESTIONS & HELPFULNESS · 4 WEEKS</div>
+              <div style="display:flex;align-items:flex-end;gap:7px;height:74px">
+                <div style="flex:1;background:linear-gradient(180deg,#818CF8,#6366F1);height:46%;border-radius:5px 5px 0 0"></div>
+                <div style="flex:1;background:linear-gradient(180deg,#818CF8,#6366F1);height:60%;border-radius:5px 5px 0 0"></div>
+                <div style="flex:1;background:linear-gradient(180deg,#818CF8,#6366F1);height:72%;border-radius:5px 5px 0 0"></div>
+                <div style="flex:1;background:linear-gradient(180deg,#38BDF8,#0EA5E9);height:92%;border-radius:5px 5px 0 0"></div>
+              </div>
+            </div>
+            <div class="wCard" style="flex:1">
+              <div style="font-size:9px;color:#94A3B8;font-weight:700;margin-bottom:6px">CONTENT GAPS — couldn't answer</div>
+              <div style="font-size:10px;padding:4px 0;border-bottom:1px solid #F1F5F9">"RO-5000 remote telemetry setup" · ×6</div>
+              <div style="font-size:10px;padding:4px 0;border-bottom:1px solid #F1F5F9">"RTU-80 economizer wiring 2024 rev" · ×4</div>
+              <div style="font-size:10px;padding:4px 0">"X900 RFID encoding errors" · ×3</div>
+              <div style="font-size:9px;color:#6366F1;font-weight:700;margin-top:5px">→ Upload covering documents</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:8px">Spec: the content-gap card is the dashboard's hero insight — it tells admins exactly which documents to upload next, closing the loop between usage and knowledge coverage.</p>
+  </section>
+
+  <!-- 8. RTL & ACCESSIBILITY -->
+  <section>
+    <h2><span class="num">8.</span>RTL, Localization & Accessibility</h2>
+    <table>
+      <tr><th style="width:200px">Area</th><th>Specification</th></tr>
+      <tr><td>RTL (Hebrew)</td><td>Full mirror via CSS logical properties (<code>margin-inline-start</code> etc.): navigation, chat bubbles, step numbers, and chevrons flip; numerals, error codes, and part numbers remain LTR islands (<code>dir="ltr"</code> spans). Per-message direction auto-detected — mixed-language chats are supported.</td></tr>
+      <tr><td>Type in Hebrew</td><td>Noto Sans Hebrew, +1px size compensation at body sizes for x-height parity with Inter</td></tr>
+      <tr><td>Contrast</td><td>WCAG 2.1 AA minimum on all pairs; safety banner red tested at 5.2:1 on Night background</td></tr>
+      <tr><td>Touch & motor</td><td>48px targets, no long-press-only actions, text scaling to 130% without layout break</td></tr>
+      <tr><td>Screen readers</td><td>Answers as semantic ordered lists; confidence and safety announced before steps; figure images carry the extracted caption as alt text</td></tr>
+      <tr><td>Color independence</td><td>Confidence and curation states always pair color with icon + label — never color alone</td></tr>
+    </table>
+  </section>
+
+  <div style="text-align:center;color:#94A3B8;font-size:11px;padding:8px 0 24px">FixMate GUI Specification v1.0 · Companion to the Product Specification & System Architecture document</div>
+</div>
+</body>
+</html>

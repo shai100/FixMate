@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A0F1A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FixMate — Technician App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Hebrew:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   FixMate — Technician Mobile App (interactive mockup)
+   Implements: docs/fixmate-gui-spec.html v1.0 (Night theme)
+   ============================================================ */
+:root{
+  --night:#0A0F1A; --surface:#0F172A; --surface2:#162033; --border:#1E293B; --border2:#334155;
+  --txt:#E2E8F0; --txt2:#94A3B8; --txt3:#64748B;
+  --p1:#0EA5E9; --p2:#6366F1;
+  --grad:linear-gradient(135deg,var(--p1),var(--p2));
+  --ok:#22C55E; --okT:#4ADE80; --warn:#EAB308; --warnT:#FACC15;
+  --danger:#EF4444; --dangerT:#F87171; --info:#38BDF8; --infoT:#7DD3FC;
+  --r-s:8px; --r-m:12px; --r-l:16px;
+  --e-fast:150ms cubic-bezier(.4,0,.2,1);
+  --e-slide:250ms cubic-bezier(.32,.72,.34,1);
+  --font:'Inter','Noto Sans Hebrew',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:100%}
+html[dir=rtl] body{font-size:calc(1em + 1px)} /* Hebrew x-height parity (§8) */
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,textarea{font-family:inherit}
+::selection{background:rgba(99,102,241,.4)}
+
+/* ---------- Desktop stage (phone frame) ---------- */
+body{
+  font-family:var(--font);background:#060A14;color:var(--txt);
+  min-height:100vh;line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.stage{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;gap:64px;
+  padding:40px 24px;position:relative;overflow:hidden;
+  background:
+    radial-gradient(900px 500px at 80% -10%, rgba(99,102,241,.14), transparent 60%),
+    radial-gradient(700px 500px at 5% 110%, rgba(14,165,233,.10), transparent 60%),
+    #060A14;
+}
+.stage::before{ /* faint blueprint grid */
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(rgba(148,163,184,.045) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(148,163,184,.045) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse at center,black 30%,transparent 75%);
+  -webkit-mask-image:radial-gradient(ellipse at center,black 30%,transparent 75%);
+}
+.stageInfo{max-width:330px;position:relative;z-index:1}
+.stageInfo .siLogo{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.stageInfo .siMark{width:46px;height:46px;border-radius:14px;background:var(--grad);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(14,165,233,.35)}
+.stageInfo h1{font-size:1.5rem;font-weight:800;letter-spacing:.2px}
+.stageInfo .siSub{color:var(--txt3);font-size:.72rem;font-family:var(--mono);margin-top:2px;letter-spacing:.4px}
+.stageInfo p{color:var(--txt2);font-size:.85rem;margin-bottom:22px}
+.stageInfo .tips{display:flex;flex-direction:column;gap:9px}
+.stageInfo .tip{display:flex;gap:11px;align-items:flex-start;background:rgba(15,23,42,.65);border:1px solid var(--border);border-radius:var(--r-m);padding:11px 13px;font-size:.8rem;color:var(--txt2);backdrop-filter:blur(4px)}
+.stageInfo .tip b{color:var(--txt);font-weight:600}
+.stageInfo .tipN{width:22px;height:22px;border-radius:7px;flex-shrink:0;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);color:var(--info);font-size:.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+.stageInfo .siFoot{margin-top:24px;font-size:.68rem;color:var(--txt3);font-family:var(--mono);letter-spacing:.4px}
+
+.phoneFrame{
+  width:392px;height:820px;flex-shrink:0;position:relative;z-index:1;
+  border-radius:54px;background:linear-gradient(160deg,#2A3550,#0B1120 40%);
+  padding:11px;
+  box-shadow:0 0 0 1px rgba(148,163,184,.18), 0 40px 90px rgba(0,0,0,.65), 0 0 120px rgba(14,165,233,.07);
+}
+.phoneFrame::after{ /* side button */
+  content:"";position:absolute;top:170px;inset-inline-end:-2px;width:3px;height:64px;border-radius:2px;background:#39455F;
+}
+.phoneScreen{
+  width:100%;height:100%;border-radius:44px;overflow:hidden;background:var(--night);
+  position:relative;display:flex;flex-direction:column;
+}
+.island{
+  position:absolute;top:11px;left:50%;transform:translateX(-50%);
+  width:108px;height:26px;border-radius:999px;background:#000;z-index:60;pointer-events:none;
+}
+.statusbar{
+  height:46px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+  padding:10px 28px 0;font-size:.78rem;font-weight:600;position:relative;z-index:55;
+}
+.statusbar .sbIcons{display:flex;align-items:center;gap:6px;color:var(--txt)}
+
+/* on real phones: app fills the viewport, frame chrome disappears */
+@media (max-width:860px){
+  .stage{padding:0;display:block;min-height:100dvh}
+  .stage::before{display:none}
+  .stageInfo{display:none}
+  .phoneFrame{width:100%;height:100dvh;border-radius:0;padding:0;box-shadow:none;background:var(--night)}
+  .phoneFrame::after{display:none}
+  .phoneScreen{border-radius:0}
+  .island{display:none}
+  .statusbar{height:env(safe-area-inset-top,0px);padding:0;overflow:hidden}
+}
+
+/* ---------- App shell ---------- */
+.app{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.screens{flex:1;position:relative;overflow:hidden}
+.screen{
+  position:absolute;inset:0;display:flex;flex-direction:column;background:var(--night);
+  visibility:hidden;
+}
+.screen.active{visibility:visible}
+@media (prefers-reduced-motion:no-preference){
+  .screen.anim-fwd{animation:slideFwd var(--e-slide) both}
+  .screen.anim-back{animation:slideBack var(--e-slide) both}
+  .screen.anim-fade{animation:fadeUp 250ms cubic-bezier(.32,.72,.34,1) both}
+  html[dir=rtl] .screen.anim-fwd{animation-name:slideFwdR}
+  html[dir=rtl] .screen.anim-back{animation-name:slideBackR}
+}
+@keyframes slideFwd{from{transform:translateX(46px);opacity:0}to{transform:none;opacity:1}}
+@keyframes slideBack{from{transform:translateX(-32px);opacity:0}to{transform:none;opacity:1}}
+@keyframes slideFwdR{from{transform:translateX(-46px);opacity:0}to{transform:none;opacity:1}}
+@keyframes slideBackR{from{transform:translateX(32px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadeUp{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+
+/* ---------- Header ---------- */
+.hd{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;flex-shrink:0;
+  background:rgba(15,23,42,.85);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);min-height:56px;
+}
+.hd .hdTitle{font-size:.95rem;font-weight:700;letter-spacing:.1px}
+.hd .hdSub{font-size:.68rem;color:var(--txt3);margin-top:-2px}
+.iconBtn{
+  width:42px;height:42px;border-radius:var(--r-m);display:flex;align-items:center;justify-content:center;
+  color:var(--txt2);transition:background var(--e-fast),transform var(--e-fast);flex-shrink:0;
+}
+.iconBtn:active{background:var(--surface2);transform:scale(.94)}
+html[dir=rtl] .flipRtl{transform:scaleX(-1)}
+.spacer{margin-inline-start:auto}
+
+/* ---------- Common components ---------- */
+.btn{
+  border-radius:var(--r-m);padding:0 20px;height:50px;font-size:.9rem;font-weight:700;color:#fff;
+  background:var(--grad);display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  transition:transform var(--e-fast),filter var(--e-fast),opacity var(--e-fast);
+  box-shadow:0 6px 18px rgba(14,165,233,.25);
+}
+.btn:active{transform:scale(.975);filter:brightness(1.12)}
+.btn.sec{background:transparent;border:1px solid var(--border2);color:var(--txt2);box-shadow:none}
+.btn.okBtn{background:linear-gradient(135deg,#22C55E,#16A34A);box-shadow:0 6px 18px rgba(34,197,94,.22)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.inp{
+  background:var(--night);border:1px solid var(--border2);border-radius:var(--r-m);
+  padding:0 14px;height:50px;color:var(--txt);font-size:.9rem;width:100%;outline:none;
+  transition:border-color var(--e-fast),box-shadow var(--e-fast);
+}
+.inp::placeholder{color:var(--txt3)}
+.inp:focus{border-color:var(--p1);box-shadow:0 0 0 3px rgba(14,165,233,.18)}
+.fieldLbl{font-size:.7rem;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);padding:14px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:600;border-radius:var(--r-s);padding:4px 9px;white-space:nowrap}
+.chip.outline{border:1px solid var(--border2);color:var(--txt2)}
+.chip.okC{background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.4);color:var(--okT)}
+.chip.srcC{background:var(--night);border:1px solid var(--border2);color:var(--infoT)}
+.chip.infoC{background:rgba(56,189,248,.10);border:1px solid rgba(56,189,248,.35);color:var(--infoT)}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 12px;font-size:.7rem;font-weight:700}
+.badge.high{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.5);color:var(--okT)}
+.badge.medium{background:rgba(250,204,21,.12);border:1px solid rgba(234,179,8,.5);color:var(--warnT)}
+.badge.low{background:rgba(248,113,113,.12);border:1px solid rgba(239,68,68,.5);color:var(--dangerT)}
+.safety{
+  background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.4);border-radius:var(--r-m);
+  padding:10px 13px;color:#FCA5A5;font-size:.8rem;display:flex;gap:9px;align-items:flex-start;line-height:1.5;
+}
+.safety svg{flex-shrink:0;margin-top:2px}
+.stateTag{border-radius:7px;padding:3px 9px;font-size:.62rem;font-weight:800;letter-spacing:.4px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.stateTag.pending{background:rgba(234,179,8,.12);color:var(--warnT);border:1px solid rgba(234,179,8,.4)}
+.stateTag.approved{background:rgba(34,197,94,.12);color:var(--okT);border:1px solid rgba(34,197,94,.4)}
+.stateTag.rejected{background:rgba(239,68,68,.10);color:var(--dangerT);border:1px solid rgba(239,68,68,.38)}
+.stateTag.submitted{background:rgba(56,189,248,.10);color:var(--infoT);border:1px solid rgba(56,189,248,.38)}
+.mono{font-family:var(--mono);font-size:.78rem;font-weight:500}
+.ltr{direction:ltr;unicode-bidi:isolate}
+
+/* ---------- Sign-in ---------- */
+#scr-signin{justify-content:center;padding:28px;gap:12px;
+  background:
+    radial-gradient(420px 320px at 85% 0%, rgba(99,102,241,.16), transparent 70%),
+    radial-gradient(380px 300px at 0% 100%, rgba(14,165,233,.10), transparent 70%),
+    var(--night);
+}
+.siBrand{text-align:center;margin-bottom:18px}
+.logoMark{width:64px;height:64px;border-radius:19px;background:var(--grad);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 12px 32px rgba(14,165,233,.35)}
+.siBrand .name{font-size:1.55rem;font-weight:800;letter-spacing:.2px}
+.siBrand .tag{color:var(--txt3);font-size:.8rem;margin-top:2px}
+.siDivider{display:flex;align-items:center;gap:12px;color:var(--txt3);font-size:.72rem;margin:6px 0}
+.siDivider::before,.siDivider::after{content:"";flex:1;height:1px;background:var(--border)}
+.siQr{text-align:center;color:var(--infoT);font-size:.78rem;font-weight:600;padding:12px;border-radius:var(--r-m);transition:background var(--e-fast)}
+.siQr:active{background:var(--surface2)}
+@media (prefers-reduced-motion:no-preference){
+  .siStagger>*{animation:fadeUp .5s cubic-bezier(.22,.7,.3,1) both}
+  .siStagger>*:nth-child(1){animation-delay:.04s}.siStagger>*:nth-child(2){animation-delay:.10s}
+  .siStagger>*:nth-child(3){animation-delay:.16s}.siStagger>*:nth-child(4){animation-delay:.22s}
+  .siStagger>*:nth-child(5){animation-delay:.28s}.siStagger>*:nth-child(6){animation-delay:.34s}
+  .siStagger>*:nth-child(7){animation-delay:.40s}
+}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Equipment select ---------- */
+.scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.eqWrap{padding:14px;display:flex;flex-direction:column;gap:10px}
+.searchBox{position:relative}
+.searchBox svg{position:absolute;top:50%;transform:translateY(-50%);inset-inline-start:14px;color:var(--txt3);pointer-events:none}
+.searchBox .inp{padding-inline-start:42px}
+.sectionLbl{font-size:.66rem;font-weight:800;color:var(--txt3);letter-spacing:.12em;text-transform:uppercase;margin-top:6px}
+.eqCard{
+  display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-l);padding:13px;min-height:72px;text-align:start;width:100%;
+  transition:background var(--e-fast),transform var(--e-fast),border-color var(--e-fast);
+}
+.eqCard:active{background:var(--surface2);transform:scale(.985)}
+.eqIc{width:44px;height:44px;border-radius:var(--r-m);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.eqCard .eqName{font-size:.88rem;font-weight:700}
+.eqCard .eqMeta{font-size:.7rem;color:var(--txt3);margin-top:1px}
+.eqCard .chev{margin-inline-start:auto;color:var(--txt3);flex-shrink:0}
+.chipRow{display:flex;gap:7px;flex-wrap:wrap}
+.emptyHint{text-align:center;color:var(--txt3);font-size:.8rem;padding:26px 10px}
+
+/* ---------- Tab bar ---------- */
+.tabbar{
+  flex-shrink:0;display:flex;background:rgba(15,23,42,.92);backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 5px;
+  color:var(--txt3);font-size:.62rem;font-weight:600;border-radius:var(--r-m);
+  transition:color var(--e-fast);position:relative;min-height:48px;
+}
+.tab.on{color:var(--infoT)}
+.tab.on::before{content:"";position:absolute;top:0;width:18px;height:3px;border-radius:2px;background:var(--grad)}
+.tab .tabBdg{position:absolute;top:2px;inset-inline-end:calc(50% - 21px);background:var(--p2);color:#fff;font-size:.55rem;font-weight:800;border-radius:999px;min-width:15px;height:15px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* ---------- Chat ---------- ---------- */
+.chatLog{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none;overscroll-behavior:contain}
+.chatLog::-webkit-scrollbar{display:none}
+.dayDiv{align-self:center;font-size:.62rem;color:var(--txt3);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px 12px;font-weight:600}
+.uMsg{
+  align-self:flex-end;background:var(--grad);color:#fff;
+  border-radius:var(--r-l);border-end-end-radius:4px;
+  padding:10px 14px;font-size:.86rem;max-width:80%;line-height:1.45;
+  box-shadow:0 4px 14px rgba(14,165,233,.18);
+}
+html[dir=rtl] .uMsg{border-end-end-radius:var(--r-l);border-end-start-radius:4px}
+.aMsg{align-self:stretch;max-width:100%}
+.aCard{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);
+  border-start-start-radius:4px;padding:13px;display:flex;flex-direction:column;gap:10px;
+}
+.aHead{font-size:.9rem;font-weight:600;line-height:1.45}
+.aHead .mono{color:var(--infoT)}
+.stepRow{display:flex;gap:11px;align-items:flex-start}
+.stepN{
+  width:26px;height:26px;border-radius:var(--r-s);flex-shrink:0;margin-top:1px;
+  background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);color:var(--info);
+  font-size:.74rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+}
+.stepRow .stT{font-size:.85rem;font-weight:600;line-height:1.4}
+.stepRow .stD{font-size:.78rem;color:var(--txt2);margin-top:2px;line-height:1.5}
+.stepRow .stChips{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.figBox{background:var(--night);border:1px solid var(--border2);border-radius:var(--r-s);padding:7px;margin-top:8px;cursor:pointer;transition:border-color var(--e-fast)}
+.figBox:active{border-color:var(--info)}
+.figImg{
+  height:84px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:7px;
+  color:var(--infoT);font-size:.7rem;font-family:var(--mono);
+  background:repeating-linear-gradient(45deg,#121B2E,#121B2E 8px,#172238 8px,#172238 16px);
+}
+.figCap{color:var(--infoT);font-size:.66rem;margin-top:5px;display:flex;align-items:center;gap:5px}
+.fbRow{border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:8px;font-size:.74rem}
+.fbRow b{color:var(--txt2);font-weight:700}
+.fbBtn{
+  display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;border-radius:var(--r-s);
+  padding:7px 12px;min-height:34px;transition:transform var(--e-fast),opacity var(--e-fast);
+}
+.fbBtn:active{transform:scale(.94)}
+.fbYes{background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.4);color:var(--okT)}
+.fbNo{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.35);color:var(--dangerT)}
+.fbDone{color:var(--txt3);font-size:.72rem;display:flex;align-items:center;gap:6px}
+.typing{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);border-start-start-radius:4px;padding:13px 16px;display:flex;gap:5px;align-items:center}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--txt3);animation:tDot 1.1s ease-in-out infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes tDot{0%,60%,100%{transform:none;opacity:.45}30%{transform:translateY(-5px);opacity:1}}
+@media (prefers-reduced-motion:no-preference){
+  .reveal{animation:fadeUp .4s cubic-bezier(.22,.7,.3,1) both}
+}
+.suggRow{display:flex;gap:8px;flex-wrap:wrap;align-self:stretch}
+.suggChip{
+  border:1px solid var(--border2);background:var(--surface);color:var(--txt2);border-radius:999px;
+  padding:9px 14px;font-size:.76rem;font-weight:600;min-height:38px;
+  transition:border-color var(--e-fast),color var(--e-fast),transform var(--e-fast);
+}
+.suggChip:active{border-color:var(--p1);color:var(--infoT);transform:scale(.96)}
+.chatHello{text-align:center;padding:26px 18px 8px;color:var(--txt2)}
+.chatHello .chIc{width:54px;height:54px;border-radius:var(--r-l);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem}
+.chatHello .chT{font-weight:700;color:var(--txt);font-size:.95rem}
+.chatHello .chS{font-size:.76rem;color:var(--txt3);margin-top:3px}
+.imgMsg{align-self:flex-end;max-width:62%;border-radius:var(--r-l);border-end-end-radius:4px;overflow:hidden;border:1px solid var(--border2)}
+.imgMsg .imgPh{height:110px;background:repeating-linear-gradient(-45deg,#15203A,#15203A 9px,#1B2A47 9px,#1B2A47 18px);display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:.68rem;font-family:var(--mono);gap:6px}
+.imgMsg .imgLbl{background:var(--surface);font-size:.62rem;color:var(--txt3);padding:5px 9px;font-family:var(--mono)}
+
+/* ---------- Composer ---------- */
+.composer{
+  flex-shrink:0;display:flex;gap:8px;align-items:flex-end;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));
+  background:rgba(15,23,42,.92);backdrop-filter:blur(12px);border-top:1px solid var(--border);
+}
+.composer .inp{flex:1;height:48px;border-radius:999px;padding:0 18px;background:var(--night)}
+.compBtn{
+  width:48px;height:48px;border-radius:999px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:var(--surface2);color:var(--txt2);transition:transform var(--e-fast),background var(--e-fast);
+  position:relative;
+}
+.compBtn:active{transform:scale(.92)}
+.compBtn.prime{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(14,165,233,.3)}
+.compBtn.listening{background:var(--grad);color:#fff}
+.compBtn.listening::before,.compBtn.listening::after{
+  content:"";position:absolute;inset:-5px;border-radius:999px;border:2px solid var(--p1);opacity:0;
+}
+@media (prefers-reduced-motion:no-preference){
+  .compBtn.listening::before{animation:pulse 1.6s ease-out infinite}
+  .compBtn.listening::after{animation:pulse 1.6s ease-out .8s infinite}
+}
+@keyframes pulse{0%{transform:scale(.85);opacity:.8}100%{transform:scale(1.45);opacity:0}}
+.listenHint{
+  position:absolute;bottom:78px;left:50%;transform:translateX(-50%);z-index:30;
+  background:var(--surface2);border:1px solid var(--border2);border-radius:999px;color:var(--txt);
+  font-size:.74rem;font-weight:600;padding:8px 16px;display:flex;gap:8px;align-items:center;white-space:nowrap;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+.listenHint .eq{display:flex;gap:2.5px;align-items:flex-end;height:14px}
+.listenHint .eq i{width:3px;border-radius:2px;background:var(--info)}
+@media (prefers-reduced-motion:no-preference){
+  .listenHint .eq i{animation:eqB .9s ease-in-out infinite}
+  .listenHint .eq i:nth-child(1){animation-delay:0s}.listenHint .eq i:nth-child(2){animation-delay:.15s}
+  .listenHint .eq i:nth-child(3){animation-delay:.3s}.listenHint .eq i:nth-child(4){animation-delay:.45s}
+}
+@keyframes eqB{0%,100%{height:4px}50%{height:14px}}
+
+/* ---------- Fix submission ---------- */
+.fixWrap{padding:14px;display:flex;flex-direction:column;gap:12px}
+.noticeWarn{background:rgba(250,204,21,.07);border:1px solid rgba(234,179,8,.35);border-radius:var(--r-m);padding:11px 13px;color:var(--warnT);font-size:.78rem;display:flex;gap:9px;line-height:1.5}
+.noticeInfo{background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.3);border-radius:var(--r-m);padding:11px 13px;color:var(--infoT);font-size:.78rem;display:flex;gap:9px;line-height:1.5}
+.noticeWarn svg,.noticeInfo svg{flex-shrink:0;margin-top:2px}
+textarea.inp{height:130px;padding:13px 14px;resize:none;line-height:1.55;font-size:.88rem}
+.photoBtn{
+  border:1.5px dashed var(--border2);border-radius:var(--r-m);min-height:52px;display:flex;align-items:center;
+  justify-content:center;gap:8px;color:var(--txt2);font-size:.8rem;font-weight:600;width:100%;
+  transition:border-color var(--e-fast),color var(--e-fast);
+}
+.photoBtn:active{border-color:var(--p1);color:var(--infoT)}
+.photoBtn.has{border-style:solid;border-color:rgba(34,197,94,.45);color:var(--okT)}
+.fixFoot{text-align:center;color:var(--txt3);font-size:.68rem}
+
+/* ---------- Offline packs ---------- */
+.packCard{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);padding:13px}
+.packCard .pcBody{flex:1;min-width:0}
+.packCard .pcName{font-size:.86rem;font-weight:700}
+.packCard .pcMeta{font-size:.7rem;color:var(--txt3);margin-top:1px;font-family:var(--mono)}
+.progTrack{height:5px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden}
+.progFill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--p1),var(--p2));transition:width .5s linear}
+.packCard .pcState{flex-shrink:0}
+
+/* ---------- Profile ---------- */
+.profHero{display:flex;align-items:center;gap:14px;padding:4px 2px 8px}
+.avatar{width:58px;height:58px;border-radius:18px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.15rem;color:#fff;flex-shrink:0;box-shadow:0 8px 22px rgba(14,165,233,.3)}
+.profHero .pName{font-size:1.05rem;font-weight:800}
+.profHero .pRole{font-size:.74rem;color:var(--txt3)}
+.statRow{display:flex;gap:9px}
+.stat{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);padding:11px 12px;text-align:center}
+.stat b{display:block;font-size:1.15rem;font-weight:800}
+.stat span{font-size:.62rem;color:var(--txt3);font-weight:600}
+.subCard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);padding:12px 13px;display:flex;flex-direction:column;gap:7px}
+.subCard .subT{font-size:.82rem;font-weight:600;line-height:1.4}
+.subCard .subM{font-size:.68rem;color:var(--txt3)}
+.subCard .subReason{font-size:.72rem;color:var(--txt2);background:var(--night);border:1px solid var(--border);border-radius:var(--r-s);padding:7px 10px;line-height:1.5}
+.subTop{display:flex;align-items:flex-start;gap:8px;justify-content:space-between}
+
+/* ---------- Settings ---------- */
+.setGroup{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);overflow:hidden}
+.setRow{display:flex;align-items:center;gap:12px;padding:13px 14px;min-height:54px;border-bottom:1px solid var(--border);width:100%;text-align:start}
+.setRow:last-child{border-bottom:none}
+.setRow .srIc{width:34px;height:34px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--txt2);flex-shrink:0}
+.setRow .srT{font-size:.85rem;font-weight:600}
+.setRow .srS{font-size:.68rem;color:var(--txt3)}
+.seg{display:flex;background:var(--night);border:1px solid var(--border2);border-radius:10px;padding:3px;margin-inline-start:auto}
+.seg button{padding:6px 14px;border-radius:8px;font-size:.74rem;font-weight:700;color:var(--txt3);transition:all var(--e-fast)}
+.seg button.on{background:var(--grad);color:#fff}
+.switch{margin-inline-start:auto;width:46px;height:27px;border-radius:999px;background:var(--border2);position:relative;transition:background var(--e-fast);flex-shrink:0}
+.switch::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform var(--e-slide)}
+.switch.on{background:var(--p1)}
+.switch.on::after{transform:translateX(19px)}
+html[dir=rtl] .switch.on::after{transform:translateX(-19px)}
+.slider{margin-inline-start:auto;display:flex;align-items:center;gap:9px;width:150px}
+input[type=range]{flex:1;accent-color:var(--p1);height:26px}
+.sliderVal{font-family:var(--mono);font-size:.7rem;color:var(--txt2);width:38px;text-align:end}
+
+/* ---------- Sheets / modals ---------- */
+.scrim{
+  position:absolute;inset:0;background:rgba(2,6,23,.66);z-index:80;opacity:0;pointer-events:none;
+  transition:opacity var(--e-slide);backdrop-filter:blur(2px);
+}
+.scrim.show{opacity:1;pointer-events:auto}
+.sheet{
+  position:absolute;inset-inline:0;bottom:0;z-index:90;background:var(--surface);
+  border-radius:var(--r-l) var(--r-l) 0 0;border:1px solid var(--border);border-bottom:none;
+  padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));
+  transform:translateY(105%);transition:transform var(--e-slide);max-height:86%;overflow-y:auto;
+}
+.sheet.show{transform:none}
+.sheetGrab{width:38px;height:4px;border-radius:3px;background:var(--border2);margin:4px auto 14px}
+.sheetTitle{font-size:.95rem;font-weight:800;margin-bottom:4px}
+.sheetSub{font-size:.74rem;color:var(--txt3);margin-bottom:14px}
+.viewfinder{
+  position:relative;height:230px;border-radius:var(--r-l);overflow:hidden;margin-bottom:14px;
+  background:
+    radial-gradient(140px 90px at 50% 58%, rgba(56,189,248,.10), transparent 70%),
+    repeating-linear-gradient(0deg,#0B1322,#0B1322 11px,#0D1626 11px,#0D1626 22px);
+  border:1px solid var(--border2);
+}
+.vfCorner{position:absolute;width:26px;height:26px;border:2.5px solid var(--info);opacity:.9}
+.vfCorner.tl{top:14px;left:14px;border-right:none;border-bottom:none;border-radius:6px 0 0 0}
+.vfCorner.tr{top:14px;right:14px;border-left:none;border-bottom:none;border-radius:0 6px 0 0}
+.vfCorner.bl{bottom:14px;left:14px;border-right:none;border-top:none;border-radius:0 0 0 6px}
+.vfCorner.br{bottom:14px;right:14px;border-left:none;border-top:none;border-radius:0 0 6px 0}
+.vfLine{position:absolute;inset-inline:22px;height:2px;background:linear-gradient(90deg,transparent,var(--info),transparent);box-shadow:0 0 14px rgba(56,189,248,.8);top:20%}
+@media (prefers-reduced-motion:no-preference){.vfLine{animation:scanY 1.9s ease-in-out infinite alternate}}
+@keyframes scanY{from{top:14%}to{top:84%}}
+.vfPlate{
+  position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);
+  background:#C9D4E3;color:#1A2436;border-radius:5px;padding:9px 13px;font-family:var(--mono);
+  font-size:.6rem;line-height:1.6;box-shadow:0 6px 18px rgba(0,0,0,.5);direction:ltr;
+}
+.vfPlate b{font-size:.7rem;letter-spacing:.5px}
+.vfStatus{display:flex;align-items:center;gap:9px;justify-content:center;color:var(--txt2);font-size:.78rem;font-weight:600;min-height:30px}
+.vfStatus.okS{color:var(--okT)}
+.galRow{display:flex;gap:9px}
+.galPh{
+  flex:1;height:88px;border-radius:var(--r-m);border:1px solid var(--border2);overflow:hidden;display:flex;
+  flex-direction:column;transition:border-color var(--e-fast),transform var(--e-fast);
+}
+.galPh:active{border-color:var(--p1);transform:scale(.96)}
+.galPh .gImg{flex:1;display:flex;align-items:center;justify-content:center;color:var(--txt3)}
+.galPh:nth-child(1) .gImg{background:repeating-linear-gradient(-45deg,#13203B,#13203B 8px,#182746 8px,#182746 16px)}
+.galPh:nth-child(2) .gImg{background:repeating-linear-gradient(20deg,#1A1F33,#1A1F33 9px,#202741 9px,#202741 18px)}
+.galPh:nth-child(3) .gImg{background:repeating-linear-gradient(90deg,#11253A,#11253A 7px,#16304A 7px,#16304A 14px)}
+.galPh .gLbl{font-size:.56rem;color:var(--txt3);font-family:var(--mono);padding:4px 7px;background:var(--night);direction:ltr;text-align:left}
+
+/* ---------- Toast ---------- */
+.toastWrap{position:absolute;inset-inline:0;bottom:86px;display:flex;justify-content:center;z-index:100;pointer-events:none;padding:0 18px}
+.toast{
+  background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-m);color:var(--txt);
+  font-size:.78rem;font-weight:600;padding:11px 16px;display:flex;align-items:center;gap:9px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:100%;
+  opacity:0;transform:translateY(12px);transition:opacity var(--e-slide),transform var(--e-slide);
+}
+.toast.show{opacity:1;transform:none}
+.toast .okIc{color:var(--okT)}.toast .infoIc{color:var(--infoT)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition-duration:1ms !important}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- Desktop-only companion panel -->
+  <aside class="stageInfo">
+    <div class="siLogo">
+      <div class="siMark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+      <div>
+        <h1>FixMate</h1>
+        <div class="siSub">TECHNICIAN APP · INTERACTIVE MOCKUP</div>
+      </div>
+    </div>
+    <p>High-fidelity mobile mockup of the FixMate technician experience — sign-in, equipment identification, grounded AI answers, field-fix submission and offline packs. Runs fully standalone, no server.</p>
+    <div class="tips">
+      <div class="tip"><span class="tipN">1</span><span><b>Sign in</b> with any credentials, or tap SSO.</span></div>
+      <div class="tip"><span class="tipN">2</span><span><b>Scan a nameplate</b> or pick the AquaPure RO-5000.</span></div>
+      <div class="tip"><span class="tipN">3</span><span>Ask about <b>error E47</b> — or tap the mic and let voice input do it.</span></div>
+      <div class="tip"><span class="tipN">4</span><span>Answer didn't help? Tap <b>👎 No</b> and submit your own field fix for curator review.</span></div>
+      <div class="tip"><span class="tipN">5</span><span>In <b>Settings</b>, switch to עברית to see full RTL mirroring, or scale text to 130%.</span></div>
+    </div>
+    <div class="siFoot">GUI SPEC v1.0 · NIGHT THEME · JUNE 2026</div>
+  </aside>
+
+  <!-- Phone -->
+  <div class="phoneFrame">
+    <div class="phoneScreen">
+      <div class="island"></div>
+      <div class="statusbar">
+        <span id="sbTime" class="ltr">9:41</span>
+        <span class="sbIcons">
+          <svg width="16" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2.5" width="3" height="9.5" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 9.5a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zM8 5.6c-1.7 0-3.2.7-4.3 1.8l1.3 1.3A4.4 4.4 0 0 1 8 7.4c1.2 0 2.2.5 3 1.3l1.3-1.3A6 6 0 0 0 8 5.6zM8 1.6A10 10 0 0 0 .9 4.5l1.3 1.3A8.2 8.2 0 0 1 8 3.4c2.3 0 4.3.9 5.8 2.4l1.3-1.3A10 10 0 0 0 8 1.6z" transform="translate(0,-1.5)"/></svg>
+          <svg width="22" height="11" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="15" height="8" rx="1.6" fill="currentColor"/><rect x="22.6" y="3.6" width="2" height="4.8" rx="1" fill="currentColor" opacity=".4"/></svg>
+        </span>
+      </div>
+
+      <div class="app" id="app">
+        <div class="screens" id="screens">
+
+          <!-- ============ SIGN-IN ============ -->
+          <div class="screen" id="scr-signin">
+            <div class="siStagger" style="display:flex;flex-direction:column;gap:12px">
+              <div class="siBrand">
+                <div class="logoMark"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+                <div class="name">FixMate</div>
+                <div class="tag" data-i18n="tagline">Your AI repair copilot</div>
+              </div>
+              <div>
+                <label class="fieldLbl" for="inEmail" data-i18n="work_email">Work email</label>
+                <input class="inp ltr" id="inEmail" type="email" autocomplete="email" placeholder="name@company.com" value="y.cohen@aquatech.co.il">
+              </div>
+              <div>
+                <label class="fieldLbl" for="inPass" data-i18n="password">Password</label>
+                <input class="inp ltr" id="inPass" type="password" placeholder="••••••••" value="demodemo">
+              </div>
+              <button class="btn" id="btnSignin" onclick="signIn()"><span data-i18n="sign_in">Sign in</span></button>
+              <div class="siDivider" data-i18n="or">or</div>
+              <button class="btn sec" onclick="signIn()">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></svg>
+                <span data-i18n="sso">Sign in with company SSO</span>
+              </button>
+              <button class="siQr" onclick="toast('qr_toast','info')" data-i18n="qr_invite">Scan QR from your admin invite</button>
+            </div>
+          </div>
+
+          <!-- ============ EQUIPMENT SELECT ============ -->
+          <div class="screen" id="scr-equipment">
+            <div class="hd">
+              <div class="logoMark" style="width:34px;height:34px;border-radius:10px;margin:0;box-shadow:none">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              </div>
+              <div>
+                <div class="hdTitle" data-i18n="select_equipment">Select equipment</div>
+                <div class="hdSub" data-i18n="org_name">AquaTech Services Ltd.</div>
+              </div>
+              <button class="iconBtn spacer" onclick="go('scr-settings','fwd')" aria-label="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="scroll">
+              <div class="eqWrap">
+                <div class="searchBox">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input class="inp" id="eqSearch" data-i18n-ph="search_model" placeholder="Search model…" oninput="renderEquipment(this.value)">
+                </div>
+                <button class="btn" onclick="openScan()">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+                  <span data-i18n="scan_plate">Scan nameplate / QR</span>
+                </button>
+                <div class="sectionLbl" data-i18n="recent">Recent</div>
+                <div id="eqList" style="display:flex;flex-direction:column;gap:9px"></div>
+                <div class="chipRow" style="margin-top:4px">
+                  <span class="chip outline">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    <span data-i18n="offline_ready">2 packs offline ready</span>
+                  </span>
+                  <span class="chip okC">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                    <span data-i18n="team_fixes">13 team fixes live</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="tabbar" data-tabbar></div>
+          </div>
+
+          <!-- ============ CHAT ============ -->
+          <div class="screen" id="scr-chat">
+            <div class="hd">
+              <button class="iconBtn" onclick="go('scr-equipment','back')" aria-label="Back">
+                <svg class="flipRtl" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <div class="eqIc" id="chatEqIc" style="width:36px;height:36px;font-size:1.05rem"></div>
+              <div style="min-width:0">
+                <div class="hdTitle ltr" id="chatEqName" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+                <div class="hdSub" id="chatEqMeta"></div>
+              </div>
+              <button class="iconBtn spacer" onclick="toast('history_toast','info')" aria-label="More">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+              </button>
+            </div>
+            <div class="chatLog" id="chatLog" aria-live="polite"></div>
+            <div class="listenHint" id="listenHint" style="display:none">
+              <span class="eq"><i></i><i></i><i></i><i></i></span>
+              <span data-i18n="listening">Listening…</span>
+            </div>
+            <div class="composer">
+              <button class="compBtn" onclick="openPhotoSheet()" aria-label="Attach photo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+              </button>
+              <input class="inp" id="chatInput" data-i18n-ph="describe_issue" placeholder="Describe the issue…" autocomplete="off"
+                     oninput="syncComposer()" onkeydown="if(event.key==='Enter')sendFromInput()">
+              <button class="compBtn prime" id="micBtn" onclick="micOrSend()" aria-label="Voice input">
+                <svg id="micIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                <svg id="sendIcon" style="display:none" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- ============ FIX SUBMISSION ============ -->
+          <div class="screen" id="scr-fix">
+            <div class="hd">
+              <button class="iconBtn" onclick="go('scr-chat','back')" aria-label="Back">
+                <svg class="flipRtl" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <div class="hdTitle" data-i18n="what_solved">What solved it?</div>
+            </div>
+            <div class="scroll">
+              <div class="fixWrap">
+                <div class="noticeWarn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                  <span data-i18n="fix_banner">Your fix helps the next technician — after a senior tech approves it.</span>
+                </div>
+                <div>
+                  <div class="sectionLbl" style="margin:2px 0 7px" data-i18n="original_problem">Original problem</div>
+                  <div class="card" style="font-size:.8rem;color:var(--txt2)" id="fixContext">—</div>
+                </div>
+                <div>
+                  <div class="sectionLbl" style="margin:2px 0 7px" data-i18n="your_solution">Your solution</div>
+                  <textarea class="inp" id="fixText" data-i18n-ph="fix_ph" placeholder="What was the real cause, and what did you do? Include part numbers and timings where possible."></textarea>
+                </div>
+                <button class="photoBtn" id="fixPhoto" onclick="togglePhoto()">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                  <span id="fixPhotoLbl" data-i18n="add_photo">Add photo (optional)</span>
+                </button>
+                <button class="btn okBtn" id="fixSubmit" onclick="submitFix()" disabled>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  <span data-i18n="submit_review">Submit for review</span>
+                </button>
+                <div class="fixFoot" data-i18n="fix_foot">Status will appear in your profile: Pending → Approved / Rejected</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ OFFLINE PACKS ============ -->
+          <div class="screen" id="scr-packs">
+            <div class="hd">
+              <div>
+                <div class="hdTitle" data-i18n="offline_packs">Offline packs</div>
+                <div class="hdSub" data-i18n="packs_sub">Answers without signal</div>
+              </div>
+            </div>
+            <div class="scroll">
+              <div class="eqWrap">
+                <div class="noticeInfo">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" x2="12.01" y1="20" y2="20"/></svg>
+                  <span data-i18n="packs_banner">Packs answer from cached manual sections &amp; approved fixes when you have no signal.</span>
+                </div>
+                <div id="packList" style="display:flex;flex-direction:column;gap:9px"></div>
+                <div class="noticeWarn" style="align-items:center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span data-i18n="queued_note">2 questions queued — will sync when online</span>
+                </div>
+              </div>
+            </div>
+            <div class="tabbar" data-tabbar></div>
+          </div>
+
+          <!-- ============ PROFILE ============ -->
+          <div class="screen" id="scr-profile">
+            <div class="hd">
+              <div>
+                <div class="hdTitle" data-i18n="profile">Profile</div>
+                <div class="hdSub" data-i18n="org_name">AquaTech Services Ltd.</div>
+              </div>
+              <button class="iconBtn spacer" onclick="go('scr-settings','fwd')" aria-label="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="scroll">
+              <div class="eqWrap">
+                <div class="profHero">
+                  <div class="avatar">YC</div>
+                  <div>
+                    <div class="pName">Yossi Cohen</div>
+                    <div class="pRole" data-i18n="role">Field technician · Water treatment</div>
+                  </div>
+                </div>
+                <div class="statRow">
+                  <div class="stat"><b>148</b><span data-i18n="st_questions">Questions</span></div>
+                  <div class="stat"><b style="color:var(--okT)">91%</b><span data-i18n="st_helped">Helped</span></div>
+                  <div class="stat"><b style="color:var(--infoT)" id="statSubs">3</b><span data-i18n="st_fixes">Fixes shared</span></div>
+                </div>
+                <div class="sectionLbl" data-i18n="my_submissions">My submissions</div>
+                <div id="subList" style="display:flex;flex-direction:column;gap:9px"></div>
+              </div>
+            </div>
+            <div class="tabbar" data-tabbar></div>
+          </div>
+
+          <!-- ============ SETTINGS ============ -->
+          <div class="screen" id="scr-settings">
+            <div class="hd">
+              <button class="iconBtn" onclick="go(lastTab,'back')" aria-label="Back">
+                <svg class="flipRtl" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              <div class="hdTitle" data-i18n="settings">Settings</div>
+            </div>
+            <div class="scroll">
+              <div class="eqWrap">
+                <div class="sectionLbl" data-i18n="set_display">Display &amp; language</div>
+                <div class="setGroup">
+                  <div class="setRow">
+                    <div class="srIc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
+                    <div><div class="srT" data-i18n="language">Language</div><div class="srS" data-i18n="lang_sub">RTL mirrors automatically</div></div>
+                    <div class="seg">
+                      <button id="langEn" class="on" onclick="setLang('en')">EN</button>
+                      <button id="langHe" onclick="setLang('he')">עברית</button>
+                    </div>
+                  </div>
+                  <div class="setRow">
+                    <div class="srIc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg></div>
+                    <div><div class="srT" data-i18n="text_size">Text size</div><div class="srS" data-i18n="text_size_sub">Layout holds up to 130%</div></div>
+                    <div class="slider">
+                      <input type="range" id="fsRange" min="100" max="130" step="10" value="100" oninput="setScale(this.value)" aria-label="Text size">
+                      <span class="sliderVal ltr" id="fsVal">100%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="sectionLbl" data-i18n="set_input">Input &amp; alerts</div>
+                <div class="setGroup">
+                  <button class="setRow" onclick="toggleSwitch('swVoice')">
+                    <div class="srIc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div>
+                    <div><div class="srT" data-i18n="voice_input">Voice input</div><div class="srS" data-i18n="voice_sub">Hands-free questions</div></div>
+                    <span class="switch on" id="swVoice"></span>
+                  </button>
+                  <button class="setRow" onclick="toggleSwitch('swNotif')">
+                    <div class="srIc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+                    <div><div class="srT" data-i18n="notifications">Notifications</div><div class="srS" data-i18n="notif_sub">Fix review results, pack updates</div></div>
+                    <span class="switch on" id="swNotif"></span>
+                  </button>
+                </div>
+                <div class="sectionLbl" data-i18n="set_account">Account</div>
+                <div class="setGroup">
+                  <div class="setRow">
+                    <div class="srIc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                    <div><div class="srT">Yossi Cohen</div><div class="srS ltr">y.cohen@aquatech.co.il</div></div>
+                  </div>
+                  <button class="setRow" onclick="signOut()">
+                    <div class="srIc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg></div>
+                    <div><div class="srT" data-i18n="sign_out">Sign out</div></div>
+                  </button>
+                </div>
+                <div style="text-align:center;color:var(--txt3);font-size:.66rem;font-family:var(--mono);padding:8px 0" class="ltr">FixMate v1.0 · build 2026.06</div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /screens -->
+
+        <!-- Scrim + sheets -->
+        <div class="scrim" id="scrim" onclick="closeSheets()"></div>
+
+        <div class="sheet" id="scanSheet">
+          <div class="sheetGrab"></div>
+          <div class="sheetTitle" data-i18n="scan_title">Scan nameplate</div>
+          <div class="sheetSub" data-i18n="scan_sub">Point the camera at the model plate or QR sticker</div>
+          <div class="viewfinder">
+            <span class="vfCorner tl"></span><span class="vfCorner tr"></span><span class="vfCorner bl"></span><span class="vfCorner br"></span>
+            <div class="vfLine" id="vfLine"></div>
+            <div class="vfPlate">
+              <b>AQUAPURE&nbsp;RO-5000</b><br>
+              S/N&nbsp;AP5-22-08841 · 16&nbsp;bar<br>
+              400V&nbsp;3~&nbsp;50Hz · 2026
+            </div>
+          </div>
+          <div class="vfStatus" id="vfStatus">
+            <span class="spin" style="border-color:rgba(148,163,184,.3);border-top-color:var(--info)"></span>
+            <span data-i18n="scan_searching">Identifying equipment…</span>
+          </div>
+        </div>
+
+        <div class="sheet" id="photoSheet">
+          <div class="sheetGrab"></div>
+          <div class="sheetTitle" data-i18n="photo_title">Attach a photo</div>
+          <div class="sheetSub" data-i18n="photo_sub">The assistant reads nameplates, gauges and error displays</div>
+          <div class="galRow">
+            <button class="galPh" onclick="sendPhoto('IMG_4231 · gauge.jpg')">
+              <span class="gImg"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+              <span class="gLbl">IMG_4231 · gauge.jpg</span>
+            </button>
+            <button class="galPh" onclick="sendPhoto('IMG_4232 · panel.jpg')">
+              <span class="gImg"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span>
+              <span class="gLbl">IMG_4232 · panel.jpg</span>
+            </button>
+            <button class="galPh" onclick="sendPhoto('IMG_4233 · fitting.jpg')">
+              <span class="gImg"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+              <span class="gLbl">IMG_4233 · fitting.jpg</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toastWrap"><div class="toast" id="toast"></div></div>
+
+      </div><!-- /app -->
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= i18n ================= */
+const I18N = {
+  en: {
+    tagline:'Your AI repair copilot', work_email:'Work email', password:'Password', sign_in:'Sign in',
+    or:'or', sso:'Sign in with company SSO', qr_invite:'Scan QR from your admin invite',
+    qr_toast:'QR sign-in: scan the invite from your admin console',
+    select_equipment:'Select equipment', org_name:'AquaTech Services Ltd.', search_model:'Search model…',
+    scan_plate:'Scan nameplate / QR', recent:'Recent', offline_ready:'2 packs offline ready', team_fixes:'13 team fixes live',
+    manuals:'manuals', manual_1:'manual', fixes:'verified fixes', fix_1:'verified fix', no_match:'No equipment matches — try the scanner',
+    tab_equipment:'Equipment', tab_packs:'Packs', tab_profile:'Profile',
+    describe_issue:'Describe the issue…', listening:'Listening…',
+    history_toast:'Session history & manual browser — full build',
+    hello_t:'Ask about this unit', hello_s:'Answers are grounded in the service manuals and your team’s approved fixes.',
+    did_help:'Did it help?', yes:'Yes', no:'No', fb_yes_done:'Logged as helpful — thanks!', fb_no_done:'Sorry — tell us what worked',
+    today:'Today', tap_open:'tap to open',
+    what_solved:'What solved it?', fix_banner:'Your fix helps the next technician — after a senior tech approves it.',
+    original_problem:'Original problem', your_solution:'Your solution',
+    fix_ph:'What was the real cause, and what did you do? Include part numbers and timings where possible.',
+    add_photo:'Add photo (optional)', photo_added:'photo-001.jpg attached', submit_review:'Submit for review',
+    fix_foot:'Status will appear in your profile: Pending → Approved / Rejected',
+    fix_sent:'Submitted — a senior tech will review it',
+    offline_packs:'Offline packs', packs_sub:'Answers without signal',
+    packs_banner:'Packs answer from cached manual sections & approved fixes when you have no signal.',
+    queued_note:'2 questions queued — will sync when online',
+    synced:'synced 2h ago', downloading:'downloading…', updated:'updated just now', not_downloaded:'not downloaded',
+    pack_done:'ThermoMax RTU-80 pack ready for offline use',
+    profile:'Profile', role:'Field technician · Water treatment',
+    st_questions:'Questions', st_helped:'Helped', st_fixes:'Fixes shared', my_submissions:'My submissions',
+    settings:'Settings', set_display:'Display & language', language:'Language', lang_sub:'RTL mirrors automatically',
+    text_size:'Text size', text_size_sub:'Layout holds up to 130%',
+    set_input:'Input & alerts', voice_input:'Voice input', voice_sub:'Hands-free questions',
+    notifications:'Notifications', notif_sub:'Fix review results, pack updates', set_account:'Account', sign_out:'Sign out',
+    scan_title:'Scan nameplate', scan_sub:'Point the camera at the model plate or QR sticker',
+    scan_searching:'Identifying equipment…', scan_found:'AquaPure RO-5000 identified',
+    photo_title:'Attach a photo', photo_sub:'The assistant reads nameplates, gauges and error displays',
+    answer_offline:'Answering from offline pack',
+    pending:'PENDING REVIEW', approved:'APPROVED · ACTIVE', rejected:'REJECTED', submitted:'SUBMITTED',
+  },
+  he: {
+    tagline:'עוזר התיקונים החכם שלך', work_email:'אימייל עבודה', password:'סיסמה', sign_in:'כניסה',
+    or:'או', sso:'כניסה עם SSO ארגוני', qr_invite:'סריקת QR מהזמנת המנהל',
+    qr_toast:'כניסת QR: סרקו את ההזמנה מקונסולת הניהול',
+    select_equipment:'בחירת ציוד', org_name:'אקווה-טק שירותים בע״מ', search_model:'חיפוש דגם…',
+    scan_plate:'סריקת לוחית דגם / QR', recent:'אחרונים', offline_ready:'2 חבילות זמינות לא־מקוון', team_fixes:'13 תיקוני צוות פעילים',
+    manuals:'מדריכים', manual_1:'מדריך', fixes:'תיקונים מאומתים', fix_1:'תיקון מאומת', no_match:'אין ציוד תואם — נסו את הסורק',
+    tab_equipment:'ציוד', tab_packs:'חבילות', tab_profile:'פרופיל',
+    describe_issue:'תארו את התקלה…', listening:'מאזין…',
+    history_toast:'היסטוריית שיחות ועיון במדריך — בגרסה המלאה',
+    hello_t:'שאלו על היחידה הזו', hello_s:'התשובות מבוססות על מדריכי השירות והתיקונים המאושרים של הצוות.',
+    did_help:'האם זה עזר?', yes:'כן', no:'לא', fb_yes_done:'נרשם כמועיל — תודה!', fb_no_done:'מצטערים — ספרו לנו מה עבד',
+    today:'היום', tap_open:'הקישו לפתיחה',
+    what_solved:'מה פתר את התקלה?', fix_banner:'התיקון שלך יעזור לטכנאי הבא — לאחר אישור של טכנאי בכיר.',
+    original_problem:'הבעיה המקורית', your_solution:'הפתרון שלך',
+    fix_ph:'מה הייתה הסיבה האמיתית ומה עשיתם? כללו מק״טים וזמנים אם אפשר.',
+    add_photo:'הוספת תמונה (אופציונלי)', photo_added:'photo-001.jpg צורפה', submit_review:'שליחה לאישור',
+    fix_foot:'הסטטוס יופיע בפרופיל: ממתין ← מאושר / נדחה',
+    fix_sent:'נשלח — טכנאי בכיר יבדוק את התיקון',
+    offline_packs:'חבילות לא־מקוון', packs_sub:'תשובות גם בלי קליטה',
+    packs_banner:'החבילות עונות מתוך קטעי מדריך ותיקונים מאושרים כשאין קליטה.',
+    queued_note:'2 שאלות בתור — יסונכרנו כשיהיה חיבור',
+    synced:'סונכרן לפני שעתיים', downloading:'מוריד…', updated:'עודכן הרגע', not_downloaded:'לא הורד',
+    pack_done:'חבילת ThermoMax RTU-80 מוכנה לשימוש לא־מקוון',
+    profile:'פרופיל', role:'טכנאי שטח · טיהור מים',
+    st_questions:'שאלות', st_helped:'עזרו', st_fixes:'תיקונים ששותפו', my_submissions:'ההגשות שלי',
+    settings:'הגדרות', set_display:'תצוגה ושפה', language:'שפה', lang_sub:'המסך מתהפך אוטומטית ל-RTL',
+    text_size:'גודל טקסט', text_size_sub:'הפריסה נשמרת עד 130%',
+    set_input:'קלט והתראות', voice_input:'קלט קולי', voice_sub:'שאלות ללא ידיים',
+    notifications:'התראות', notif_sub:'תוצאות אישור תיקונים, עדכוני חבילות', set_account:'חשבון', sign_out:'התנתקות',
+    scan_title:'סריקת לוחית דגם', scan_sub:'כוונו את המצלמה ללוחית הדגם או למדבקת ה-QR',
+    scan_searching:'מזהה ציוד…', scan_found:'זוהה: AquaPure RO-5000',
+    photo_title:'צירוף תמונה', photo_sub:'העוזר קורא לוחיות, מדי לחץ ותצוגות שגיאה',
+    answer_offline:'עונה מתוך חבילה לא־מקוונת',
+    pending:'ממתין לאישור', approved:'מאושר · פעיל', rejected:'נדחה', submitted:'הוגש',
+  }
+};
+let lang = 'en';
+const t = k => (I18N[lang][k] ?? I18N.en[k] ?? k);
+const nManuals = n => `${n} ${t(n === 1 ? 'manual_1' : 'manuals')}`;
+const nFixes = n => `${n} ${t(n === 1 ? 'fix_1' : 'fixes')}`;
+
+/* ================= Data ================= */
+const EQUIPMENT = [
+  { id:'ro5000', name:'AquaPure RO-5000', type:{en:'RO water treatment',he:'טיהור מים באוסמוזה הפוכה'},
+    icon:'💧', accent:'56,189,248', manuals:3, fixes:4, packMB:142 },
+  { id:'rtu80', name:'ThermoMax RTU-80', type:{en:'Rooftop HVAC unit',he:'יחידת מיזוג גג'},
+    icon:'🌀', accent:'251,146,60', manuals:2, fixes:7, packMB:96 },
+  { id:'x900', name:'PrintPro X900', type:{en:'Industrial label printer',he:'מדפסת תוויות תעשייתית'},
+    icon:'🖨', accent:'167,139,250', manuals:1, fixes:2, packMB:38 },
+];
+const eqById = id => EQUIPMENT.find(e => e.id === id);
+
+/* Canned suggestions per equipment (first one doubles as the voice transcript) */
+const SUGGESTIONS = {
+  ro5000: { en:['Unit shows error E47, what do I do?','Output flow dropped 30%','Leak at the membrane housing'],
+            he:['היחידה מציגה שגיאה E47, מה לעשות?','הספיקה ירדה ב-30%','נזילה בבית הממברנה'] },
+  rtu80:  { en:['Error F08 right after a belt change','Not reaching setpoint on hot days'],
+            he:['שגיאה F08 מיד אחרי החלפת רצועה','לא מגיע לטמפרטורת היעד בימים חמים'] },
+  x900:   { en:['Error 0x4F on boot','Labels feeding crooked'],
+            he:['שגיאה 0x4F בהדלקה','תוויות נמשכות עקום'] },
+};
+
+/* Knowledge base: keyword-matched canned answers (mockup of the RAG pipeline) */
+const KB = {
+  ro5000: [
+    { match:/e47|differential|מציגה שגיאה|pressure drop/i, confidence:'high',
+      head:'<span class="mono ltr">E47</span> = high differential pressure across the membrane stage — most often fouling, but check the cheap causes first.',
+      safety:'System operates at 16 bar. Depressurize via valve V-3 before opening membrane housings.',
+      steps:[
+        { t:'Check concentrate valve position', d:'Confirm the valve is fully open. A partially closed valve mimics membrane fouling.',
+          src:'Fig 12 · p.41', fig:{cap:'Fig 12 — concentrate valve location', src:'Service Manual Rev 4.2 · p.41'} },
+        { t:'Inspect the permeate line behind the frame', d:'A kinked permeate line raises differential pressure within minutes. Re-route and re-check.', field:true },
+        { t:'Run CIP cleaning cycle', d:'Use low-pH cleaner if the pressure drop exceeds 15%.', src:'§6.3 · p.58' },
+      ]},
+    { match:/flow|ספיקה|output|gpm/i, confidence:'medium',
+      head:'A 30% flow drop with no error code usually points to feed-side restriction rather than membranes.',
+      steps:[
+        { t:'Check feed pressure at gauge P-1', d:'Should read 3.5–4.5 bar before the pump. Below 3 bar → upstream restriction.', src:'§5.2 · p.49' },
+        { t:'Swap 5µ sediment prefilter', d:'Part PN AP-CF-505. Typical service life 4–6 weeks on municipal feed.', src:'§5.4 · p.51' },
+        { t:'Verify with a normalized flow reading', d:'Compare against commissioning baseline before touching membranes.' },
+      ]},
+    { match:/leak|נזילה|drip/i, confidence:'medium',
+      head:'Housing leaks are almost always O-ring seats, not the housing itself.',
+      safety:'Depressurize via valve V-3 and lock out the feed pump before opening any housing.',
+      steps:[
+        { t:'Mark the leak origin while pressurized', d:'Chalk-mark the wet seam, then depressurize.' },
+        { t:'Replace end-cap O-ring', d:'Part PN AP-OR-220 (EPDM). Lubricate with food-grade silicone only.', src:'§7.1 · p.63' },
+      ]},
+    { match:/^photo$/, confidence:'medium',
+      head:'From the photo: the gauge on the left manifold reads ~18 bar — that is above the 16 bar working limit.',
+      safety:'Do not open any housing at this pressure. Depressurize via valve V-3 first.',
+      steps:[
+        { t:'Verify gauge reading against P-2', d:'If both gauges agree, reduce feed pressure at the regulator to 16 bar max.', src:'§5.1 · p.47' },
+        { t:'Check the concentrate valve', d:'Over-pressure with normal feed often means the concentrate path is throttled.', src:'Fig 12 · p.41' },
+      ]},
+  ],
+  rtu80: [
+    { match:/f08|belt|רצועה/i, confidence:'high',
+      head:'<span class="mono ltr">F08</span> = blower over-current. After a belt change this is nearly always pulley alignment, not the motor.',
+      safety:'Lock out the disconnect before reaching into the blower compartment — auto-restart is enabled by default.',
+      steps:[
+        { t:'Check pulley alignment with a straightedge', d:'Misalignment above 2 mm overloads the motor within minutes.', field:true },
+        { t:'Re-tension the belt', d:'Deflection 12–15 mm at mid-span per the service chart.', src:'§4.6 · p.33' },
+        { t:'Clear the fault and watch amps', d:'Should settle below 8.2 A within 60 seconds.', src:'§9.2 · p.71' },
+      ]},
+    { match:/setpoint|hot|טמפרטורת|cool/i, confidence:'medium',
+      head:'Capacity loss on hot days usually means a dirty condenser coil or low charge — check airflow first.',
+      steps:[
+        { t:'Inspect and rinse the condenser coil', d:'Rinse top-down with low-pressure water only.', src:'§6.1 · p.44' },
+        { t:'Check subcooling', d:'Target 8–12 K at 35°C ambient. Below 5 K suggests low charge — leak-check before topping up.', src:'§7.3 · p.55' },
+      ]},
+  ],
+  x900: [
+    { match:/0x4f|4f|boot|הדלקה/i, confidence:'high',
+      head:'<span class="mono ltr">0x4F</span> at boot is a known printhead-EEPROM handshake bug — fixed in firmware 3.1.2.',
+      steps:[
+        { t:'Update firmware to 3.1.2 or later', d:'USB update takes ~4 minutes; the printer must stay powered.', field:true },
+        { t:'If the error persists, reseat the printhead cable', d:'Connector J4, latch fully closed.', src:'§3.2 · p.18' },
+      ]},
+    { match:/crook|feed|jam|עקום|תוויות/i, confidence:'medium',
+      head:'Crooked feeding is usually the media guides, not the rollers.',
+      steps:[
+        { t:'Re-seat the media guides snug to the roll', d:'Guides should touch the media without bowing it.', src:'§2.4 · p.12' },
+        { t:'Clean the platen roller', d:'Isopropyl alcohol ≥ 90%, let dry 2 minutes.', src:'§5.1 · p.27' },
+      ]},
+  ],
+};
+const FALLBACK = {
+  confidence:'low',
+  head:'I could not find a grounded answer for this in the manuals or approved fixes for this unit.',
+  steps:[
+    { t:'Escalate to a senior technician', d:'This question was logged as a content gap for the knowledge team.' },
+    { t:'Check the nearest match in the manual', d:'Use the troubleshooting matrix as a starting point.', src:'§9 · p.68' },
+  ],
+};
+
+/* Profile submissions (state machine demo for §5.5 tags) */
+let SUBMISSIONS = [
+  { title:'F08 recurs if belt replaced without pulley alignment', eq:'rtu80', state:'approved', meta:'2026-05-28 · ThermoMax RTU-80' },
+  { title:'0x4F gone after firmware 3.1.2 update', eq:'x900', state:'approved', meta:'2026-04-15 · PrintPro X900' },
+  { title:'Bypass valve “fix” for low flow', eq:'ro5000', state:'rejected', meta:'2026-03-02 · AquaPure RO-5000',
+    reason:'Rejected by D. Levi — bypassing the concentrate valve voids the warranty and risks membrane damage. Use the CIP procedure instead.' },
+];
+
+/* ================= State ================= */
+let currentScreen = 'scr-signin';
+let lastTab = 'scr-equipment';
+let currentEq = null;
+let chatStarted = {};       // eqId -> bool (greeting replaced)
+let pendingFixContext = ''; // question that led to 👎
+let fixHasPhoto = false;
+let listening = false;
+let packTimer = null;
+let packPct = 55;
+
+/* ================= Tiny helpers ================= */
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function icon(name, size = 14){
+  const paths = {
+    check:'<path d="M20 6 9 17l-5-5"/>',
+    halfdot:'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
+    alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    book:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+    bulb:'<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+    thumbsUp:'<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
+    thumbsDown:'<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
+    chevR:'<path d="m9 18 6-6-6-6"/>',
+    grid:'<rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/>',
+    pack:'<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+    user:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+    camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+    image:'<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+  };
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`;
+}
+
+/* ================= Clock ================= */
+function tick(){
+  const d = new Date();
+  $('sbTime').textContent = d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+tick(); setInterval(tick, 15000);
+
+/* ================= Router ================= */
+function go(id, dir){
+  if(id === currentScreen) return;
+  const prev = $(currentScreen), next = $(id);
+  prev.classList.remove('active','anim-fwd','anim-back','anim-fade');
+  next.classList.add('active');
+  next.classList.remove('anim-fwd','anim-back','anim-fade');
+  void next.offsetWidth; // restart animation
+  next.classList.add(dir === 'fwd' ? 'anim-fwd' : dir === 'back' ? 'anim-back' : 'anim-fade');
+  currentScreen = id;
+  if(['scr-equipment','scr-packs','scr-profile'].includes(id)){ lastTab = id; renderTabbars(); }
+  if(id === 'scr-packs') startPackDemo();
+}
+
+/* ================= Tab bar ================= */
+function renderTabbars(){
+  const tabs = [
+    { id:'scr-equipment', ic:'grid',  lbl:t('tab_equipment') },
+    { id:'scr-packs',     ic:'pack',  lbl:t('tab_packs') },
+    { id:'scr-profile',   ic:'user',  lbl:t('tab_profile'), bdg: SUBMISSIONS.some(s=>s.state==='pending') ? SUBMISSIONS.filter(s=>s.state==='pending').length : 0 },
+  ];
+  document.querySelectorAll('[data-tabbar]').forEach(bar => {
+    bar.innerHTML = tabs.map(tb => `
+      <button class="tab ${lastTab===tb.id?'on':''}" onclick="go('${tb.id}','fade')" aria-label="${tb.lbl}">
+        ${icon(tb.ic,20)}<span>${tb.lbl}</span>
+        ${tb.bdg ? `<span class="tabBdg">${tb.bdg}</span>` : ''}
+      </button>`).join('');
+  });
+}
+
+/* ================= Sign in / out ================= */
+function signIn(){
+  const b = $('btnSignin');
+  b.innerHTML = '<span class="spin"></span>';
+  b.disabled = true;
+  setTimeout(() => {
+    b.disabled = false;
+    b.innerHTML = `<span>${t('sign_in')}</span>`;
+    go('scr-equipment','fwd');
+  }, reduced ? 50 : 750);
+}
+function signOut(){ closeSheets(); go('scr-signin','back'); }
+
+/* ================= Equipment list ================= */
+function renderEquipment(filter = ''){
+  const q = filter.trim().toLowerCase();
+  const list = EQUIPMENT.filter(e => !q || e.name.toLowerCase().includes(q) || e.type.en.toLowerCase().includes(q) || (e.type.he||'').includes(q));
+  $('eqList').innerHTML = list.length ? list.map(e => `
+    <button class="eqCard" onclick="openChat('${e.id}')">
+      <span class="eqIc" style="background:rgba(${e.accent},.12);border:1px solid rgba(${e.accent},.4)">${e.icon}</span>
+      <span style="min-width:0">
+        <span class="eqName ltr" style="display:block">${e.name}</span>
+        <span class="eqMeta" style="display:block">${e.type[lang]||e.type.en} · ${nManuals(e.manuals)} · ${nFixes(e.fixes)}</span>
+      </span>
+      <span class="chev">${icon('chevR',18).replace('<svg','<svg class="flipRtl"')}</span>
+    </button>`).join('')
+    : `<div class="emptyHint">${t('no_match')}</div>`;
+}
+
+/* ================= Chat ================= */
+function openChat(eqId){
+  currentEq = eqById(eqId);
+  $('chatEqIc').style.cssText = `background:rgba(${currentEq.accent},.12);border:1px solid rgba(${currentEq.accent},.4)`;
+  $('chatEqIc').textContent = currentEq.icon;
+  $('chatEqName').textContent = currentEq.name;
+  $('chatEqMeta').textContent = `${nManuals(currentEq.manuals)} · ${nFixes(currentEq.fixes)}`;
+  if(!chatStarted[eqId]) renderChatGreeting();
+  go('scr-chat','fwd');
+}
+function renderChatGreeting(){
+  const sugg = (SUGGESTIONS[currentEq.id][lang] || SUGGESTIONS[currentEq.id].en);
+  $('chatLog').innerHTML = `
+    <div class="dayDiv">${t('today')}</div>
+    <div class="chatHello">
+      <div class="chIc" style="background:rgba(${currentEq.accent},.12);border:1px solid rgba(${currentEq.accent},.4)">${currentEq.icon}</div>
+      <div class="chT">${t('hello_t')}</div>
+      <div class="chS">${t('hello_s')}</div>
+    </div>
+    <div class="suggRow" id="suggRow">
+      ${sugg.map(s => `<button class="suggChip" dir="auto" onclick="askSuggestion(this)">${esc(s)}</button>`).join('')}
+    </div>`;
+}
+function askSuggestion(btn){ ask(btn.textContent); }
+function syncComposer(){
+  const has = $('chatInput').value.trim().length > 0;
+  $('micIcon').style.display = has ? 'none' : '';
+  $('sendIcon').style.display = has ? '' : 'none';
+}
+function sendFromInput(){
+  const v = $('chatInput').value.trim();
+  if(!v) return;
+  $('chatInput').value = ''; syncComposer();
+  ask(v);
+}
+function micOrSend(){
+  if($('chatInput').value.trim()) return sendFromInput();
+  if(listening) return;
+  listening = true;
+  $('micBtn').classList.add('listening');
+  $('listenHint').style.display = '';
+  setTimeout(() => {
+    listening = false;
+    $('micBtn').classList.remove('listening');
+    $('listenHint').style.display = 'none';
+    const s = (SUGGESTIONS[currentEq.id][lang] || SUGGESTIONS[currentEq.id].en)[0];
+    ask(s);
+  }, reduced ? 200 : 2300);
+}
+function clearGreetingExtras(){
+  const sr = $('suggRow'); if(sr) sr.remove();
+  const hello = document.querySelector('.chatHello'); if(hello) hello.remove();
+}
+function ask(text){
+  chatStarted[currentEq.id] = true;
+  clearGreetingExtras();
+  const log = $('chatLog');
+  log.insertAdjacentHTML('beforeend', `<div class="uMsg reveal" dir="auto">${esc(text)}</div>`);
+  scrollLog();
+  answer(text);
+}
+function sendPhoto(label){
+  closeSheets();
+  if(currentScreen !== 'scr-chat') return;
+  chatStarted[currentEq.id] = true;
+  clearGreetingExtras();
+  $('chatLog').insertAdjacentHTML('beforeend', `
+    <div class="imgMsg reveal">
+      <div class="imgPh">${icon('image',18)} ${esc(label)}</div>
+      <div class="imgLbl">${esc(label)} · 2.4 MB</div>
+    </div>`);
+  scrollLog();
+  answer('photo');
+}
+function findAnswer(q){
+  const entries = KB[currentEq.id] || [];
+  return entries.find(e => e.match.test(q)) || FALLBACK;
+}
+function answer(q){
+  const log = $('chatLog');
+  log.insertAdjacentHTML('beforeend', `<div class="typing" id="typing"><i></i><i></i><i></i></div>`);
+  scrollLog();
+  const a = findAnswer(q);
+  setTimeout(() => {
+    $('typing').remove();
+    renderAnswer(a, q);
+  }, reduced ? 60 : 1250);
+}
+const CONF = {
+  high:   { cls:'high',   ic:'check',   en:'High confidence — grounded in manual', he:'ביטחון גבוה — מבוסס על המדריך' },
+  medium: { cls:'medium', ic:'halfdot', en:'Medium — verify on site',              he:'ביטחון בינוני — לאמת בשטח' },
+  low:    { cls:'low',    ic:'alert',   en:'Low — escalate to senior tech',        he:'ביטחון נמוך — להסלים לטכנאי בכיר' },
+};
+let answerSeq = 0;
+function renderAnswer(a, q){
+  const id = 'ans' + (++answerSeq);
+  const conf = CONF[a.confidence];
+  const stepHtml = (s, i) => `
+    <div class="stepRow ${reduced?'':'reveal'}" style="animation-delay:${.25 + i*.3}s">
+      <span class="stepN">${i+1}</span>
+      <div style="min-width:0">
+        <div class="stT">${s.t}</div>
+        <div class="stD">${s.d}</div>
+        ${ (s.src || s.field) ? `<div class="stChips">
+            ${s.src ? `<span class="chip srcC">${icon('book',12)} <span class="ltr">${s.src}</span></span>` : ''}
+            ${s.field ? `<span class="chip okC">${icon('bulb',12)} Field-verified</span>` : ''}
+          </div>` : '' }
+        ${ s.fig ? `<div class="figBox" onclick="toast('history_toast','info')">
+            <div class="figImg">${icon('image',16)} ${s.fig.cap}</div>
+            <div class="figCap">${icon('book',11)} <span class="ltr">${s.fig.src}</span> · ${t('tap_open')}</div>
+          </div>` : '' }
+      </div>
+    </div>`;
+  $('chatLog').insertAdjacentHTML('beforeend', `
+    <div class="aMsg reveal"><div class="aCard">
+      <div><span class="badge ${conf.cls}">${icon(conf.ic,13)} ${conf[lang] || conf.en}</span></div>
+      <div class="aHead" dir="auto">${a.head}</div>
+      ${a.safety ? `<div class="safety" role="alert">${icon('alert',16)} <span>${a.safety}</span></div>` : ''}
+      ${a.steps.map(stepHtml).join('')}
+      <div class="fbRow ${reduced?'':'reveal'}" style="animation-delay:${.35 + a.steps.length*.3}s" id="${id}">
+        <b>${t('did_help')}</b>
+        <button class="fbBtn fbYes" onclick="fbYes('${id}')">${icon('thumbsUp',13)} ${t('yes')}</button>
+        <button class="fbBtn fbNo" onclick="fbNo('${id}', this)" data-q="${esc(q)}">${icon('thumbsDown',13)} ${t('no')}</button>
+      </div>
+    </div></div>`);
+  scrollLog();
+  // keep scrolling as staggered steps reveal
+  if(!reduced){
+    let n = 0;
+    const iv = setInterval(() => { scrollLog(); if(++n > 6) clearInterval(iv); }, 320);
+  }
+}
+function fbYes(id){
+  $(id).innerHTML = `<span class="fbDone" style="color:var(--okT)">${icon('check',14)} ${t('fb_yes_done')}</span>`;
+  toast('fb_yes_done','ok');
+}
+function fbNo(id, btn){
+  pendingFixContext = btn.dataset.q === 'photo' ? '"Photo diagnosis" · answer didn’t resolve' : `"${btn.dataset.q}"`;
+  $(id).innerHTML = `<span class="fbDone">${icon('thumbsDown',13)} ${t('fb_no_done')}</span>`;
+  openFix();
+}
+function scrollLog(){
+  const log = $('chatLog');
+  log.scrollTo({ top: log.scrollHeight, behavior: reduced ? 'auto' : 'smooth' });
+}
+
+/* ================= Fix submission ================= */
+function openFix(){
+  $('fixContext').innerHTML = `<span dir="auto">${pendingFixContext}</span> <span style="color:var(--txt3)">· ${currentEq ? currentEq.name : ''}</span>`;
+  $('fixText').value = '';
+  fixHasPhoto = false;
+  $('fixPhoto').classList.remove('has');
+  $('fixPhotoLbl').textContent = t('add_photo');
+  $('fixSubmit').disabled = true;
+  $('fixText').oninput = () => { $('fixSubmit').disabled = $('fixText').value.trim().length < 8; };
+  go('scr-fix','fwd');
+}
+function togglePhoto(){
+  fixHasPhoto = !fixHasPhoto;
+  $('fixPhoto').classList.toggle('has', fixHasPhoto);
+  $('fixPhotoLbl').textContent = fixHasPhoto ? t('photo_added') : t('add_photo');
+}
+function submitFix(){
+  const txt = $('fixText').value.trim();
+  SUBMISSIONS.unshift({
+    title: txt.length > 64 ? txt.slice(0,64) + '…' : txt,
+    eq: currentEq ? currentEq.id : 'ro5000',
+    state:'pending',
+    meta:'2026-06-11 · ' + (currentEq ? currentEq.name : ''),
+  });
+  renderSubmissions(); renderTabbars();
+  go('scr-chat','back');
+  toast('fix_sent','ok');
+}
+
+/* ================= Offline packs ================= */
+function renderPacks(){
+  const ro = eqById('ro5000'), rtu = eqById('rtu80'), x = eqById('x900');
+  const done = packPct >= 100;
+  $('packList').innerHTML = `
+    <div class="packCard">
+      <span class="eqIc" style="background:rgba(${ro.accent},.12);border:1px solid rgba(${ro.accent},.4)">${ro.icon}</span>
+      <div class="pcBody">
+        <div class="pcName ltr">${ro.name}</div>
+        <div class="pcMeta ltr">142 MB · ${t('synced')}</div>
+        <div class="progTrack"><div class="progFill" style="width:100%"></div></div>
+      </div>
+      <span class="chip okC pcState">${icon('check',12)}</span>
+    </div>
+    <div class="packCard">
+      <span class="eqIc" style="background:rgba(${rtu.accent},.12);border:1px solid rgba(${rtu.accent},.4)">${rtu.icon}</span>
+      <div class="pcBody">
+        <div class="pcName ltr">${rtu.name}</div>
+        <div class="pcMeta ltr" id="rtuMeta">96 MB · ${done ? t('updated') : t('downloading')}</div>
+        <div class="progTrack"><div class="progFill" id="rtuProg" style="width:${packPct}%"></div></div>
+      </div>
+      <span class="chip ${done?'okC':'outline'} pcState ltr" id="rtuPct">${done ? icon('check',12) : packPct + '%'}</span>
+    </div>
+    <div class="packCard" style="opacity:.65">
+      <span class="eqIc" style="background:rgba(${x.accent},.12);border:1px solid rgba(${x.accent},.4)">${x.icon}</span>
+      <div class="pcBody">
+        <div class="pcName ltr">${x.name}</div>
+        <div class="pcMeta">${t('not_downloaded')} · <span class="ltr">38 MB</span></div>
+      </div>
+      <span class="chip outline pcState">${icon('download',13)}</span>
+    </div>`;
+}
+function startPackDemo(){
+  renderPacks();
+  if(packPct >= 100 || packTimer) return;
+  packTimer = setInterval(() => {
+    packPct = Math.min(100, packPct + 3);
+    const f = $('rtuProg'), p = $('rtuPct'), m = $('rtuMeta');
+    if(f) f.style.width = packPct + '%';
+    if(p) p.textContent = packPct + '%';
+    if(packPct >= 100){
+      clearInterval(packTimer); packTimer = null;
+      if(p){ p.className = 'chip okC pcState'; p.innerHTML = icon('check',12); }
+      if(m) m.textContent = '96 MB · ' + t('updated');
+      toast('pack_done','ok');
+    }
+  }, reduced ? 60 : 600);
+}
+
+/* ================= Profile ================= */
+function renderSubmissions(){
+  $('statSubs').textContent = SUBMISSIONS.length;
+  $('subList').innerHTML = SUBMISSIONS.map(s => {
+    const e = eqById(s.eq);
+    return `<div class="subCard">
+      <div class="subTop">
+        <div class="subT" dir="auto">${esc(s.title)}</div>
+        <span class="stateTag ${s.state}">${t(s.state)}</span>
+      </div>
+      <div class="subM"><span class="ltr">${e.icon} ${s.meta}</span></div>
+      ${s.reason ? `<div class="subReason">${esc(s.reason)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ================= Scan sheet ================= */
+let scanTimer = null;
+function openScan(){
+  $('scrim').classList.add('show');
+  $('scanSheet').classList.add('show');
+  $('vfStatus').className = 'vfStatus';
+  $('vfStatus').innerHTML = `<span class="spin" style="border-color:rgba(148,163,184,.3);border-top-color:var(--info)"></span><span>${t('scan_searching')}</span>`;
+  scanTimer = setTimeout(() => {
+    $('vfStatus').className = 'vfStatus okS';
+    $('vfStatus').innerHTML = `${icon('check',16)} <span class="ltr">${t('scan_found')}</span>`;
+    scanTimer = setTimeout(() => { closeSheets(); openChat('ro5000'); }, 950);
+  }, reduced ? 250 : 2300);
+}
+function openPhotoSheet(){
+  $('scrim').classList.add('show');
+  $('photoSheet').classList.add('show');
+}
+function closeSheets(){
+  if(scanTimer){ clearTimeout(scanTimer); scanTimer = null; }
+  $('scrim').classList.remove('show');
+  $('scanSheet').classList.remove('show');
+  $('photoSheet').classList.remove('show');
+}
+
+/* ================= Toast ================= */
+let toastTimer = null;
+function toast(key, kind){
+  const el = $('toast');
+  el.innerHTML = `<span class="${kind==='ok'?'okIc':'infoIc'}">${icon(kind==='ok'?'check':'bulb',15)}</span><span>${t(key)}</span>`;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+/* ================= Settings ================= */
+function setLang(l){
+  lang = l;
+  document.documentElement.lang = l;
+  document.documentElement.dir = l === 'he' ? 'rtl' : 'ltr';
+  $('langEn').classList.toggle('on', l === 'en');
+  $('langHe').classList.toggle('on', l === 'he');
+  document.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(n => { n.placeholder = t(n.dataset.i18nPh); });
+  renderEquipment($('eqSearch').value);
+  renderPacks(); renderSubmissions(); renderTabbars();
+  if(currentEq){
+    $('chatEqMeta').textContent = `${nManuals(currentEq.manuals)} · ${nFixes(currentEq.fixes)}`;
+    if(!chatStarted[currentEq.id]) renderChatGreeting();
+  }
+}
+function setScale(v){
+  document.documentElement.style.fontSize = v + '%';
+  $('fsVal').textContent = v + '%';
+}
+function toggleSwitch(id){ $(id).classList.toggle('on'); }
+
+/* ================= Boot ================= */
+renderEquipment();
+renderPacks();
+renderSubmissions();
+renderTabbars();
+$(currentScreen).classList.add('active');
+</script>
+</body>
+</html>
