@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fixmate"
+version = "0.1.0"
+description = "AI-powered troubleshooting assistant for field technicians"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy[asyncio]>=2",
+    "asyncpg",
+    "alembic",
+    "pgvector",
+    "celery[redis]",
+    "redis",
+    "httpx",
+    "anthropic",
+    "boto3",
+    "pymupdf",
+    "pydantic-settings",
+    "python-multipart",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+include = ["fixmate*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "integration: requires docker compose services running",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

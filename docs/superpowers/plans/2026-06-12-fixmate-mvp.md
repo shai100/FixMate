@@ -71,7 +71,7 @@ pyproject.toml
 
 **Files:** Create `docker-compose.yml`, `.env.example`, `pyproject.toml`, `fixmate/__init__.py`, `fixmate/core/settings.py`, `scripts/healthcheck.py`, `tests/conftest.py`, `.gitignore` (add `.env`, `.venv/`, `web/node_modules/`).
 
-- [ ] **0.1 Write `docker-compose.yml`** (spec §8.2):
+- [x] **0.1 Write `docker-compose.yml`** (spec §8.2):
 
 ```yaml
 services:
@@ -109,7 +109,7 @@ services:
 volumes: { pgdata: {}, miniodata: {}, ollamadata: {} }
 ```
 
-- [ ] **0.2 Write `.env.example`** (copy to `.env` locally; never commit `.env`):
+- [x] **0.2 Write `.env.example`** (copy to `.env` locally; never commit `.env`):
 
 ```env
 DATABASE_URL=postgresql+asyncpg://fixmate:fixmate@localhost:5432/fixmate
@@ -127,11 +127,11 @@ ANTHROPIC_MODEL=claude-opus-4-8
 DEV_AUTH=true                      # Phase 6 header auth; must be false outside local
 ```
 
-- [ ] **0.3 Write `pyproject.toml`** — package `fixmate`, deps: `fastapi`, `uvicorn[standard]`, `sqlalchemy[asyncio]>=2`, `asyncpg`, `alembic`, `pgvector`, `celery[redis]`, `redis`, `httpx`, `anthropic`, `boto3`, `pymupdf`, `pydantic-settings`, `python-multipart`; dev: `pytest`, `pytest-asyncio`, `ruff`. Install: `python -m venv .venv; .venv\Scripts\activate; pip install -e ".[dev]"`.
+- [x] **0.3 Write `pyproject.toml`** — package `fixmate`, deps: `fastapi`, `uvicorn[standard]`, `sqlalchemy[asyncio]>=2`, `asyncpg`, `alembic`, `pgvector`, `celery[redis]`, `redis`, `httpx`, `anthropic`, `boto3`, `pymupdf`, `pydantic-settings`, `python-multipart`; dev: `pytest`, `pytest-asyncio`, `ruff`. Install: `python -m venv .venv; .venv\Scripts\activate; pip install -e ".[dev]"`.
 
-- [ ] **0.4 Write `fixmate/core/settings.py`** — `class Settings(BaseSettings)` mirroring `.env.example` fields exactly (types: all `str` except `dev_auth: bool`); `settings = Settings()` module singleton reading `.env`.
+- [x] **0.4 Write `fixmate/core/settings.py`** — `class Settings(BaseSettings)` mirroring `.env.example` fields exactly (types: all `str` except `dev_auth: bool`); `settings = Settings()` module singleton reading `.env`.
 
-- [ ] **0.5 Write `scripts/healthcheck.py`** — connects to each service and prints one line per service:
+- [x] **0.5 Write `scripts/healthcheck.py`** — connects to each service and prints one line per service:
 
 ```python
 import asyncio, httpx, redis, boto3, asyncpg
