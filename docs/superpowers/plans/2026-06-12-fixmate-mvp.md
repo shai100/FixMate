@@ -24,7 +24,7 @@
 | Phase | Deliverable | Standalone verification | Status |
 |---|---|---|---|
 | 0 | Repo scaffold + Compose infra | `docker compose up -d` + `python scripts/healthcheck.py` | ☐ |
-| 1 | Schema, migrations, RLS tenancy | `pytest tests/db -v` | ☐ |
+| 1 | Schema, migrations, RLS tenancy | `pytest tests/db -v` | ☑ |
 | 2 | LLM provider abstraction | `python -m fixmate.llm.cli "ping"` + `pytest tests/llm -v` | ☐ |
 | 3 | Ingestion pipeline (PDF→chunks+figures→index) | `python -m fixmate.ingestion.cli <pdf> --org demo` | ☐ |
 | 4 | Hybrid retrieval (vector+FTS+RRF+boost) | `python -m fixmate.retrieval.cli "E47" --org demo` | ☐ |
@@ -193,7 +193,7 @@ CREATE POLICY tenant_isolation ON chunks
 ```
 - App connects as non-superuser role `fixmate_app` (create in migration, grant CRUD, no BYPASSRLS). `session_for_org` opens a transaction and issues `SET LOCAL app.current_org_id = :org`.
 
-- [ ] **1.1 Write failing RLS test** `tests/db/test_rls.py`:
+- [x] **1.1 Write failing RLS test** `tests/db/test_rls.py`:
 
 ```python
 import pytest
@@ -219,10 +219,10 @@ async def test_rls_blocks_cross_tenant_insert(two_orgs):
             await s.commit()
 ```
 
-- [ ] **1.2 Run:** `pytest tests/db -v` → FAIL (models/migrations missing).
-- [ ] **1.3 Implement models + initial Alembic migration + `db.py`.** `alembic upgrade head`.
-- [ ] **1.4 Run:** `pytest tests/db -v` → PASS.
-- [ ] **1.5 Commit:** `git commit -m "feat: schema + RLS tenant isolation (phase 1)"`
+- [x] **1.2 Run:** `pytest tests/db -v` → FAIL (models/migrations missing).
+- [x] **1.3 Implement models + initial Alembic migration + `db.py`.** `alembic upgrade head`.
+- [x] **1.4 Run:** `pytest tests/db -v` → PASS.
+- [x] **1.5 Commit:** `git commit -m "feat: schema + RLS tenant isolation (phase 1)"`
 
 **Run it standalone:** `alembic upgrade head; pytest tests/db -v`. The RLS tests are the multi-org CI scenario CLAUDE.md §6 demands — they run on every PR from here on.
 

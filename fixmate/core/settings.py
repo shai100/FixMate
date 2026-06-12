@@ -5,6 +5,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     database_url: str = "postgresql+asyncpg://fixmate:fixmate@localhost:5432/fixmate"
+    # Non-superuser role (no BYPASSRLS) the application connects as; RLS
+    # policies only bite when not connected as the table owner/superuser.
+    database_app_url: str = "postgresql+asyncpg://fixmate_app:fixmate_app@localhost:5432/fixmate"
     redis_url: str = "redis://localhost:6379/0"
     s3_endpoint: str = "http://localhost:9000"
     s3_access_key: str = "fixmate"
