@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the FixMate MVP (spec §6: text Q&A with citations + confidence, PDF ingestion with figures, equipment profiles, feedback loop, full curation workflow, basic admin, EN+HE) running entirely on a local PC per spec §8.
+**Goal:** Build the FixMate MVP (spec §6: text Q&A with citations + confidence, PDF ingestion with figures, equipment profiles, feedback loop, full curation workflow, basic admin, English) running entirely on a local PC per spec §8.
 
 **Architecture:** Python/FastAPI monolith + Celery workers over Postgres (pgvector + FTS + RLS), MinIO, Redis, and Ollama, all in Docker Compose. LLM access goes through a provider-abstraction layer (`LLM_PROVIDER=ollama|anthropic`). One React PWA serves technician chat and curator/admin views with role-based routes (MVP simplification of the spec's two clients — same design system, fewer moving parts).
 
@@ -181,7 +181,7 @@ Tables (every one carries `organization_id uuid not null` — CLAUDE.md §4.5): 
 Key migration details:
 - `CREATE EXTENSION IF NOT EXISTS vector;`
 - `embedding vector(1024)` — **BGE-M3 emits 1024-dim vectors; this dimension is a contract with Phase 2/3.**
-- `tsv tsvector GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED` — `'simple'` config because Postgres has no Hebrew stemmer; required for EN+HE (FR-7).
+- `tsv tsvector GENERATED ALWAYS AS (to_tsvector('english', content)) STORED` — `'english'` config gives stemming ("valves" matches "valve"); if more launch languages are added later (FR-7), switch to `'simple'` or per-language configs and re-run this migration.
 - Indexes: `USING hnsw (embedding vector_cosine_ops)` on chunks; `USING gin (tsv)`.
 - RLS on every tenant table:
 
@@ -295,7 +295,7 @@ class AnthropicProvider:
 ```
 
 - [ ] **2.5 Implement `embeddings.py`**: `async def embed(texts: list[str]) -> list[list[float]]` → `POST {OLLAMA_BASE_URL}/api/embed` with `model=bge-m3` (embeddings always run on the Ollama/CPU path regardless of `LLM_PROVIDER` — spec §8.3; assert `len(vec) == 1024`).
-- [ ] **2.6 Integration test** `tests/llm/test_ollama_integration.py` (marked `@pytest.mark.integration`, needs compose up): `complete()` returns non-empty text; `embed(["hello","שלום"])` returns two 1024-dim vectors.
+- [ ] **2.6 Integration test** `tests/llm/test_ollama_integration.py` (marked `@pytest.mark.integration`, needs compose up): `complete()` returns non-empty text; `embed(["hello", "pump pressure too high"])` returns two 1024-dim vectors.
 - [ ] **2.7 `cli.py`:** `python -m fixmate.llm.cli "Say OK" [--provider anthropic]` prints `[provider/model] text`.
 - [ ] **2.8 Run:** `pytest tests/llm -v` → PASS; CLI prints a response. **Commit:** `"feat: LLM provider abstraction with ollama + anthropic backends (phase 2)"`
 
@@ -374,7 +374,7 @@ def apply_field_fix_boost(scores: dict[str, float], field_fix_ids: set[str],
 ```
 Run → PASS → commit.
 
-- [ ] **4.3 Vector + keyword search** (integration test): `vector.py` = cosine KNN via pgvector (`ORDER BY embedding <=> :qvec LIMIT 20`); `keyword.py` = `WHERE tsv @@ plainto_tsquery('simple', :q) ORDER BY ts_rank(...) LIMIT 20`. Test seeds chunks and asserts: query "E47" — keyword search finds the exact-code chunk even when vector search ranks it low (the hybrid justification, spec §5.2). All queries run inside `session_for_org` (RLS scopes tenancy automatically).
+- [ ] **4.3 Vector + keyword search** (integration test): `vector.py` = cosine KNN via pgvector (`ORDER BY embedding <=> :qvec LIMIT 20`); `keyword.py` = `WHERE tsv @@ plainto_tsquery('english', :q) ORDER BY ts_rank(...) LIMIT 20` (query config must match the `'english'` tsvector config from Phase 1). Test seeds chunks and asserts: query "E47" — keyword search finds the exact-code chunk even when vector search ranks it low (the hybrid justification, spec §5.2). All queries run inside `session_for_org` (RLS scopes tenancy automatically).
 - [ ] **4.4 Reranker** `rerank.py`: MVP = embed query + candidate texts with BGE-M3, re-sort by cosine similarity; return `(chunk, score∈[0,1])`. Interface: `async def rerank(query: str, chunks: list[Chunk]) -> list[tuple[Chunk, float]]`. (Cross-encoder `bge-reranker-v2-m3` is a drop-in upgrade later — same signature.) Test: known-relevant chunk ranks first on fixture data.
 - [ ] **4.5 `service.py`:** `async def search(org_id, equipment_id, query, top_k=8) -> list[ScoredChunk]` — embed query → vector + keyword in parallel → RRF → field-fix boost → rerank → top_k. `ScoredChunk = (chunk_id, document_id, source_type, page, text, score, fix_id|None)`.
 - [ ] **4.6 CLI:** `python -m fixmate.retrieval.cli "E47 error" --org demo` prints ranked table (score, source_type, page, first 80 chars). Run against Phase 3 ingested data. Commit.
@@ -427,7 +427,7 @@ def check_groundedness(answer: str, chunk_texts: list[str]) -> tuple[bool, list[
 Run → PASS → commit.
 
 - [ ] **5.3 Confidence** `confidence.py`: map top rerank score → `high (≥0.70) / medium (≥0.45) / low`; `low` ⇒ answer is replaced by the FR-4 "don't know" response (nearest sections + escalate action). Thresholds are initial values — calibrate in Phase 12; do not lower without eval evidence (CLAUDE.md §4.4 safety-critical comment goes on these constants). Unit tests for the three bands.
-- [ ] **5.4 Prompts** `prompts.py`: system prompt for answer composition — answer ONLY from supplied chunks; structure: safety warnings first, diagnosis, numbered steps with exact values, required parts, citations as `[chunk:<id>]` markers after each claim; field-fix chunks must be presented with their verification badge text "Field-verified — approved by {approver} on {date}"; respond in the language of the question (EN/HE).
+- [ ] **5.4 Prompts** `prompts.py`: system prompt for answer composition — answer ONLY from supplied chunks; structure: safety warnings first, diagnosis, numbered steps with exact values, required parts, citations as `[chunk:<id>]` markers after each claim; field-fix chunks must be presented with their verification badge text "Field-verified — approved by {approver} on {date}"; respond in English.
 - [ ] **5.5 Composer (integration test):** `compose_answer(org_id, equipment_id, question, history=[])` → search (Phase 4) → if confidence low: return escalation answer (no LLM call for the body); else LLM `complete` → parse `[chunk:id]` citations → validate every cited id ∈ retrieved set → run `check_groundedness`; on failure retry once with violations appended to the prompt, then degrade to escalation answer → persist `answer_logs` row (retrieved_chunk_ids, model_version, provider, confidence, citations, groundedness, tokens_used — CLAUDE.md §4.5). Returns `Answer(text, confidence, citations[], figures[], escalated: bool, answer_log_id)`. Figures: any retrieved chunk's page with a `figures` row attaches the figure URL (FR-3c).
   - Integration test asserts: answer text non-empty, ≥1 citation, `answer_logs` row written, and a nonsense question ("How do I calibrate the flux capacitor?") yields `escalated=True`.
 - [ ] **5.6 CLI:** `python -m fixmate.answers.cli "How do I fix error E47?" --org demo` prints answer, confidence, citations, log id. Commit.
@@ -531,10 +531,10 @@ Run → PASS → commit.
 
 ## Phase 10 — Technician PWA (chat)
 
-**Files:** Create `web/` (Vite + React + TS). Components: `EquipmentPicker`, `ChatView`, `AnswerCard` (safety warnings styled first; confidence chip; numbered steps; inline figures; citation links opening source page; **distinct field-fix verification badge** — spec pitfall table), `EscalationCard` (low-confidence path), `FeedbackBar` ("Did it help?" → No opens fix-submission form with photo attach). PWA: `vite-plugin-pwa` service-worker shell caching. Accessibility: WCAG 2.1 AA, ≥48px touch targets (gloves), RTL layout when answer language is Hebrew.
+**Files:** Create `web/` (Vite + React + TS). Components: `EquipmentPicker`, `ChatView`, `AnswerCard` (safety warnings styled first; confidence chip; numbered steps; inline figures; citation links opening source page; **distinct field-fix verification badge** — spec pitfall table), `EscalationCard` (low-confidence path), `FeedbackBar` ("Did it help?" → No opens fix-submission form with photo attach). PWA: `vite-plugin-pwa` service-worker shell caching. Accessibility: WCAG 2.1 AA, ≥48px touch targets (gloves).
 
 - [ ] **10.1** Scaffold + typed API client (`web/src/api.ts`) matching Phase 6/7 payloads; dev proxy to `:8000`; dev-auth headers injected from `localStorage` (replaced by Keycloak JS adapter when Phase 9 lands).
-- [ ] **10.2** Build components against the live local API (vitest component tests for AnswerCard rendering: warnings-first ordering, badge shown only when `source_type=field_fix` citation present, RTL flip).
+- [ ] **10.2** Build components against the live local API (vitest component tests for AnswerCard rendering: warnings-first ordering, badge shown only when `source_type=field_fix` citation present).
 - [ ] **10.3 Run it standalone:** `cd web; npm install; npm run dev` → ask a question end-to-end against local Ollama. Commit per component.
 
 ---

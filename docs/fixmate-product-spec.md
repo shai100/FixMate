@@ -1,6 +1,8 @@
 # FixMate — Product Specification & System Architecture
-**Version 1.1 · June 2026 · Status: Draft for review**
+**Version 1.2 · June 2026 · Status: Draft for review**
 
+> **v1.2 changes:** Hebrew support removed from launch scope (FR-7, MVP roadmap, §8.3). Launch language is English only; additional languages remain a Phase 3 roadmap item, and the architecture retains the add-languages-without-re-ingestion requirement.
+>
 > **v1.1 changes:** Resolved open technology options to single choices (§5.3), made the LLM provider layer explicitly dual-backend (local model for MVP development, Anthropic Claude for production), and added §8 — a local-PC deployment profile (Docker Compose) that runs the entire infrastructure, including a locally hosted LLM on a 4 GB GPU, before any cloud deployment.
 
 ---
@@ -36,7 +38,7 @@ Target customers: SMB and mid-market field-service companies (5–200 technician
 - **FR-4** If retrieval confidence is below threshold, the system explicitly says it doesn't know, shows the nearest related manual sections, and offers an "escalate to senior tech" action. The system never fabricates procedures, part numbers, or torque/pressure/electrical values.
 - **FR-5** Multi-turn conversation: follow-ups retain context ("the pressure is still high after cleaning").
 - **FR-6** Photo-based diagnosis: technician uploads a photo (error screen, nameplate, damaged part); the system uses it to identify the equipment/error and refine retrieval.
-- **FR-7** Multilingual: questions and answers in the user's language (launch: English + Hebrew; architecture must support adding languages without re-ingesting documents).
+- **FR-7** Language: English only at launch (v1.2 — Hebrew support removed from scope). The architecture must still support adding languages later without re-ingesting documents (see Phase 3 roadmap).
 
 ### 3.2 Knowledge ingestion
 - **FR-8** Admins upload documents (PDF, Word, HTML, scanned PDFs via OCR). The ingestion pipeline extracts text, tables, **and images/figures with their captions and page anchors**, chunks the content, and indexes it per equipment profile.
@@ -199,7 +201,7 @@ AuditEvent { actor, entity, action, before, after, timestamp }
 
 | Phase | Scope | Target |
 |---|---|---|
-| **MVP (3 mo)** | Text Q&A with citations + confidence, PDF ingestion (text+figures), equipment profiles, feedback loop, **full curation workflow**, basic admin, EN+HE | 3–5 design partners in one vertical |
+| **MVP (3 mo)** | Text Q&A with citations + confidence, PDF ingestion (text+figures), equipment profiles, feedback loop, **full curation workflow**, basic admin, English | 3–5 design partners in one vertical |
 | **Phase 2 (6 mo)** | Photo diagnosis, voice input, analytics dashboard, offline packs, AI pre-screen v2, two-reviewer rule | Paid SMB launch |
 | **Phase 3 (9–12 mo)** | OEM white-label & master-KB publishing, SSO, FSM/CRM integrations, parts-ordering links, additional languages | First OEM lighthouse deal |
 
@@ -253,9 +255,9 @@ A 4 GB VRAM card caps generation at ~4B parameters at 4-bit quantization (~2.5 G
 
 | Role | Model | Serving | Why |
 |---|---|---|---|
-| Answer composition (generation) | **Qwen3-4B-Instruct, Q4_K_M** (`ollama pull qwen3:4b`) | Ollama, GPU | Strongest instruction-following and citation discipline in the ≤4B class; usable multilingual coverage for the EN+HE launch requirement; ~2.5 GB fits 4 GB VRAM with KV-cache headroom |
-| Fallback / alternative generation | Llama 3.2 3B Instruct (`llama3.2:3b`) | Ollama, GPU | Slightly smaller and faster; weaker Hebrew |
-| Embeddings | **BGE-M3** (`bge-m3`) | CPU | Multilingual (incl. Hebrew) so EN+HE works without re-ingestion (FR-7); also emits sparse signals useful to hybrid retrieval |
+| Answer composition (generation) | **Qwen3-4B-Instruct, Q4_K_M** (`ollama pull qwen3:4b`) | Ollama, GPU | Strongest instruction-following and citation discipline in the ≤4B class; ~2.5 GB fits 4 GB VRAM with KV-cache headroom |
+| Fallback / alternative generation | Llama 3.2 3B Instruct (`llama3.2:3b`) | Ollama, GPU | Slightly smaller and faster if Qwen3-4B strains the VRAM budget |
+| Embeddings | **BGE-M3** (`bge-m3`) | CPU | Strong English retrieval quality; emits sparse signals useful to hybrid retrieval; multilingual coverage keeps the add-languages-later path (FR-7) open without re-ingestion |
 | Reranker | BGE-reranker-v2-m3 | CPU | Pairs with BGE-M3; runs acceptably on CPU at top-20 candidate depth |
 | Figure captioning (ingestion-time) | Claude vision via API (batch), or `gemma3:4b` locally at reduced quality | API / Ollama | Captioning happens once per document at ingestion, not per answer — low volume makes API use cheap, and caption quality compounds into every future retrieval |
 

@@ -13,7 +13,7 @@
     --lbg:#F8FAFC; --lsurface:#FFFFFF; --lborder:#E2E8F0; --ltxt:#0F172A; --ltxt2:#475569;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter','Noto Sans Hebrew',system-ui,sans-serif;background:#EEF2F7;color:#1E293B;line-height:1.55;padding:32px 16px}
+  body{font-family:'Inter',system-ui,sans-serif;background:#EEF2F7;color:#1E293B;line-height:1.55;padding:32px 16px}
   .doc{max-width:1080px;margin:0 auto}
   .docHead{background:linear-gradient(135deg,#0A0F1A,#111B33);border-radius:20px;padding:36px;color:#fff;margin-bottom:28px}
   .docHead h1{font-size:26px;font-weight:800;letter-spacing:.3px}
@@ -153,7 +153,7 @@
   <!-- 3. TYPOGRAPHY -->
   <section>
     <h2><span class="num">3.</span>Typography</h2>
-    <p class="lead"><b>Inter</b> (UI, Latin) + <b>Noto Sans Hebrew</b> (Hebrew, auto-fallback in the same stack) + <b>JetBrains Mono</b> (error codes, part numbers, values). Variable fonts, self-hosted. Hebrew text triggers full RTL mirroring (§8).</p>
+    <p class="lead"><b>Inter</b> (UI) + <b>JetBrains Mono</b> (error codes, part numbers, values). Variable fonts, self-hosted.</p>
     <div>
       <div class="typeRow"><div class="spec">Display · 24/32 · 800</div><div style="font-size:24px;font-weight:800">Review Queue</div></div>
       <div class="typeRow"><div class="spec">H1 · 18/26 · 700</div><div style="font-size:18px;font-weight:700">AquaPure RO-5000</div></div>
@@ -161,7 +161,6 @@
       <div class="typeRow"><div class="spec">Body · 14/21 · 400 (mobile min 13px)</div><div style="font-size:14px">Run the CIP cleaning cycle with low-pH cleaner if pressure drop exceeds 15%.</div></div>
       <div class="typeRow"><div class="spec">Caption / Meta · 11/16 · 500</div><div style="font-size:11px;color:#64748B">Approved by D. Levi · 2026-06-08</div></div>
       <div class="typeRow"><div class="spec">Mono / Values · 13 · 500</div><div style="font-family:'JetBrains Mono',monospace;font-size:13px">E47 · PN AP-CF-505 · 2.1 mL/min · 16 bar</div></div>
-      <div class="typeRow"><div class="spec">Hebrew sample · RTL</div><div style="font-size:14px" dir="rtl">בדוק את מצב שסתום הרכז — איור 12, עמ׳ 41</div></div>
     </div>
   </section>
 
@@ -339,7 +338,7 @@
       </div>
     </div>
 
-    <div class="note"><b>Also standard (not illustrated):</b> Profile & my-submissions screen (fix statuses with state tags from §5.5), notification center, and settings (language EN/HE, voice, text size up to 130%).</div>
+    <div class="note"><b>Also standard (not illustrated):</b> Profile & my-submissions screen (fix statuses with state tags from §5.5), notification center, and settings (voice, text size up to 130%).</div>
   </section>
 
   <!-- 7. WEB SCREENS -->
@@ -440,13 +439,11 @@
     <p style="margin-top:8px">Spec: the content-gap card is the dashboard's hero insight — it tells admins exactly which documents to upload next, closing the loop between usage and knowledge coverage.</p>
   </section>
 
-  <!-- 8. RTL & ACCESSIBILITY -->
+  <!-- 8. ACCESSIBILITY -->
   <section>
-    <h2><span class="num">8.</span>RTL, Localization & Accessibility</h2>
+    <h2><span class="num">8.</span>Accessibility</h2>
     <table>
       <tr><th style="width:200px">Area</th><th>Specification</th></tr>
-      <tr><td>RTL (Hebrew)</td><td>Full mirror via CSS logical properties (<code>margin-inline-start</code> etc.): navigation, chat bubbles, step numbers, and chevrons flip; numerals, error codes, and part numbers remain LTR islands (<code>dir="ltr"</code> spans). Per-message direction auto-detected — mixed-language chats are supported.</td></tr>
-      <tr><td>Type in Hebrew</td><td>Noto Sans Hebrew, +1px size compensation at body sizes for x-height parity with Inter</td></tr>
       <tr><td>Contrast</td><td>WCAG 2.1 AA minimum on all pairs; safety banner red tested at 5.2:1 on Night background</td></tr>
       <tr><td>Touch & motor</td><td>48px targets, no long-press-only actions, text scaling to 130% without layout break</td></tr>
       <tr><td>Screen readers</td><td>Answers as semantic ordered lists; confidence and safety announced before steps; figure images carry the extracted caption as alt text</td></tr>

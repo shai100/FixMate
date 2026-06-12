@@ -9,7 +9,7 @@
 <title>FixMate — Technician App</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Hebrew:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
    FixMate — Technician Mobile App (interactive mockup)
@@ -25,12 +25,11 @@
   --r-s:8px; --r-m:12px; --r-l:16px;
   --e-fast:150ms cubic-bezier(.4,0,.2,1);
   --e-slide:250ms cubic-bezier(.32,.72,.34,1);
-  --font:'Inter','Noto Sans Hebrew',system-ui,sans-serif;
+  --font:'Inter',system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{font-size:100%}
-html[dir=rtl] body{font-size:calc(1em + 1px)} /* Hebrew x-height parity (§8) */
 button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
 input,textarea{font-family:inherit}
 ::selection{background:rgba(99,102,241,.4)}
@@ -116,8 +115,6 @@ body{
   .screen.anim-fwd{animation:slideFwd var(--e-slide) both}
   .screen.anim-back{animation:slideBack var(--e-slide) both}
   .screen.anim-fade{animation:fadeUp 250ms cubic-bezier(.32,.72,.34,1) both}
-  html[dir=rtl] .screen.anim-fwd{animation-name:slideFwdR}
-  html[dir=rtl] .screen.anim-back{animation-name:slideBackR}
 }
 @keyframes slideFwd{from{transform:translateX(46px);opacity:0}to{transform:none;opacity:1}}
 @keyframes slideBack{from{transform:translateX(-32px);opacity:0}to{transform:none;opacity:1}}
@@ -138,7 +135,6 @@ body{
   color:var(--txt2);transition:background var(--e-fast),transform var(--e-fast);flex-shrink:0;
 }
 .iconBtn:active{background:var(--surface2);transform:scale(.94)}
-html[dir=rtl] .flipRtl{transform:scaleX(-1)}
 .spacer{margin-inline-start:auto}
 
 /* ---------- Common components ---------- */
@@ -253,7 +249,6 @@ html[dir=rtl] .flipRtl{transform:scaleX(-1)}
   padding:10px 14px;font-size:.86rem;max-width:80%;line-height:1.45;
   box-shadow:0 4px 14px rgba(14,165,233,.18);
 }
-html[dir=rtl] .uMsg{border-end-end-radius:var(--r-l);border-end-start-radius:4px}
 .aMsg{align-self:stretch;max-width:100%}
 .aCard{
   background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);
@@ -400,7 +395,6 @@ textarea.inp{height:130px;padding:13px 14px;resize:none;line-height:1.55;font-si
 .switch::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform var(--e-slide)}
 .switch.on{background:var(--p1)}
 .switch.on::after{transform:translateX(19px)}
-html[dir=rtl] .switch.on::after{transform:translateX(-19px)}
 .slider{margin-inline-start:auto;display:flex;align-items:center;gap:9px;width:150px}
 input[type=range]{flex:1;accent-color:var(--p1);height:26px}
 .sliderVal{font-family:var(--mono);font-size:.7rem;color:var(--txt2);width:38px;text-align:end}
@@ -490,7 +484,7 @@ input[type=range]{flex:1;accent-color:var(--p1);height:26px}
       <div class="tip"><span class="tipN">2</span><span><b>Scan a nameplate</b> or pick the AquaPure RO-5000.</span></div>
       <div class="tip"><span class="tipN">3</span><span>Ask about <b>error E47</b> — or tap the mic and let voice input do it.</span></div>
       <div class="tip"><span class="tipN">4</span><span>Answer didn't help? Tap <b>👎 No</b> and submit your own field fix for curator review.</span></div>
-      <div class="tip"><span class="tipN">5</span><span>In <b>Settings</b>, switch to עברית to see full RTL mirroring, or scale text to 130%.</span></div>
+      <div class="tip"><span class="tipN">5</span><span>In <b>Settings</b>, scale text up to 130% for gloved or low-light work.</span></div>
     </div>
     <div class="siFoot">GUI SPEC v1.0 · NIGHT THEME · JUNE 2026</div>
   </aside>
@@ -712,16 +706,8 @@ input[type=range]{flex:1;accent-color:var(--p1);height:26px}
             </div>
             <div class="scroll">
               <div class="eqWrap">
-                <div class="sectionLbl" data-i18n="set_display">Display &amp; language</div>
+                <div class="sectionLbl" data-i18n="set_display">Display</div>
                 <div class="setGroup">
-                  <div class="setRow">
-                    <div class="srIc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
-                    <div><div class="srT" data-i18n="language">Language</div><div class="srS" data-i18n="lang_sub">RTL mirrors automatically</div></div>
-                    <div class="seg">
-                      <button id="langEn" class="on" onclick="setLang('en')">EN</button>
-                      <button id="langHe" onclick="setLang('he')">עברית</button>
-                    </div>
-                  </div>
                   <div class="setRow">
                     <div class="srIc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg></div>
                     <div><div class="srT" data-i18n="text_size">Text size</div><div class="srS" data-i18n="text_size_sub">Layout holds up to 130%</div></div>
@@ -841,7 +827,7 @@ const I18N = {
     pack_done:'ThermoMax RTU-80 pack ready for offline use',
     profile:'Profile', role:'Field technician · Water treatment',
     st_questions:'Questions', st_helped:'Helped', st_fixes:'Fixes shared', my_submissions:'My submissions',
-    settings:'Settings', set_display:'Display & language', language:'Language', lang_sub:'RTL mirrors automatically',
+    settings:'Settings', set_display:'Display',
     text_size:'Text size', text_size_sub:'Layout holds up to 130%',
     set_input:'Input & alerts', voice_input:'Voice input', voice_sub:'Hands-free questions',
     notifications:'Notifications', notif_sub:'Fix review results, pack updates', set_account:'Account', sign_out:'Sign out',
@@ -850,42 +836,6 @@ const I18N = {
     photo_title:'Attach a photo', photo_sub:'The assistant reads nameplates, gauges and error displays',
     answer_offline:'Answering from offline pack',
     pending:'PENDING REVIEW', approved:'APPROVED · ACTIVE', rejected:'REJECTED', submitted:'SUBMITTED',
-  },
-  he: {
-    tagline:'עוזר התיקונים החכם שלך', work_email:'אימייל עבודה', password:'סיסמה', sign_in:'כניסה',
-    or:'או', sso:'כניסה עם SSO ארגוני', qr_invite:'סריקת QR מהזמנת המנהל',
-    qr_toast:'כניסת QR: סרקו את ההזמנה מקונסולת הניהול',
-    select_equipment:'בחירת ציוד', org_name:'אקווה-טק שירותים בע״מ', search_model:'חיפוש דגם…',
-    scan_plate:'סריקת לוחית דגם / QR', recent:'אחרונים', offline_ready:'2 חבילות זמינות לא־מקוון', team_fixes:'13 תיקוני צוות פעילים',
-    manuals:'מדריכים', manual_1:'מדריך', fixes:'תיקונים מאומתים', fix_1:'תיקון מאומת', no_match:'אין ציוד תואם — נסו את הסורק',
-    tab_equipment:'ציוד', tab_packs:'חבילות', tab_profile:'פרופיל',
-    describe_issue:'תארו את התקלה…', listening:'מאזין…',
-    history_toast:'היסטוריית שיחות ועיון במדריך — בגרסה המלאה',
-    hello_t:'שאלו על היחידה הזו', hello_s:'התשובות מבוססות על מדריכי השירות והתיקונים המאושרים של הצוות.',
-    did_help:'האם זה עזר?', yes:'כן', no:'לא', fb_yes_done:'נרשם כמועיל — תודה!', fb_no_done:'מצטערים — ספרו לנו מה עבד',
-    today:'היום', tap_open:'הקישו לפתיחה',
-    what_solved:'מה פתר את התקלה?', fix_banner:'התיקון שלך יעזור לטכנאי הבא — לאחר אישור של טכנאי בכיר.',
-    original_problem:'הבעיה המקורית', your_solution:'הפתרון שלך',
-    fix_ph:'מה הייתה הסיבה האמיתית ומה עשיתם? כללו מק״טים וזמנים אם אפשר.',
-    add_photo:'הוספת תמונה (אופציונלי)', photo_added:'photo-001.jpg צורפה', submit_review:'שליחה לאישור',
-    fix_foot:'הסטטוס יופיע בפרופיל: ממתין ← מאושר / נדחה',
-    fix_sent:'נשלח — טכנאי בכיר יבדוק את התיקון',
-    offline_packs:'חבילות לא־מקוון', packs_sub:'תשובות גם בלי קליטה',
-    packs_banner:'החבילות עונות מתוך קטעי מדריך ותיקונים מאושרים כשאין קליטה.',
-    queued_note:'2 שאלות בתור — יסונכרנו כשיהיה חיבור',
-    synced:'סונכרן לפני שעתיים', downloading:'מוריד…', updated:'עודכן הרגע', not_downloaded:'לא הורד',
-    pack_done:'חבילת ThermoMax RTU-80 מוכנה לשימוש לא־מקוון',
-    profile:'פרופיל', role:'טכנאי שטח · טיהור מים',
-    st_questions:'שאלות', st_helped:'עזרו', st_fixes:'תיקונים ששותפו', my_submissions:'ההגשות שלי',
-    settings:'הגדרות', set_display:'תצוגה ושפה', language:'שפה', lang_sub:'המסך מתהפך אוטומטית ל-RTL',
-    text_size:'גודל טקסט', text_size_sub:'הפריסה נשמרת עד 130%',
-    set_input:'קלט והתראות', voice_input:'קלט קולי', voice_sub:'שאלות ללא ידיים',
-    notifications:'התראות', notif_sub:'תוצאות אישור תיקונים, עדכוני חבילות', set_account:'חשבון', sign_out:'התנתקות',
-    scan_title:'סריקת לוחית דגם', scan_sub:'כוונו את המצלמה ללוחית הדגם או למדבקת ה-QR',
-    scan_searching:'מזהה ציוד…', scan_found:'זוהה: AquaPure RO-5000',
-    photo_title:'צירוף תמונה', photo_sub:'העוזר קורא לוחיות, מדי לחץ ותצוגות שגיאה',
-    answer_offline:'עונה מתוך חבילה לא־מקוונת',
-    pending:'ממתין לאישור', approved:'מאושר · פעיל', rejected:'נדחה', submitted:'הוגש',
   }
 };
 let lang = 'en';
@@ -895,29 +845,26 @@ const nFixes = n => `${n} ${t(n === 1 ? 'fix_1' : 'fixes')}`;
 
 /* ================= Data ================= */
 const EQUIPMENT = [
-  { id:'ro5000', name:'AquaPure RO-5000', type:{en:'RO water treatment',he:'טיהור מים באוסמוזה הפוכה'},
+  { id:'ro5000', name:'AquaPure RO-5000', type:{en:'RO water treatment'},
     icon:'💧', accent:'56,189,248', manuals:3, fixes:4, packMB:142 },
-  { id:'rtu80', name:'ThermoMax RTU-80', type:{en:'Rooftop HVAC unit',he:'יחידת מיזוג גג'},
+  { id:'rtu80', name:'ThermoMax RTU-80', type:{en:'Rooftop HVAC unit'},
     icon:'🌀', accent:'251,146,60', manuals:2, fixes:7, packMB:96 },
-  { id:'x900', name:'PrintPro X900', type:{en:'Industrial label printer',he:'מדפסת תוויות תעשייתית'},
+  { id:'x900', name:'PrintPro X900', type:{en:'Industrial label printer'},
     icon:'🖨', accent:'167,139,250', manuals:1, fixes:2, packMB:38 },
 ];
 const eqById = id => EQUIPMENT.find(e => e.id === id);
 
 /* Canned suggestions per equipment (first one doubles as the voice transcript) */
 const SUGGESTIONS = {
-  ro5000: { en:['Unit shows error E47, what do I do?','Output flow dropped 30%','Leak at the membrane housing'],
-            he:['היחידה מציגה שגיאה E47, מה לעשות?','הספיקה ירדה ב-30%','נזילה בבית הממברנה'] },
-  rtu80:  { en:['Error F08 right after a belt change','Not reaching setpoint on hot days'],
-            he:['שגיאה F08 מיד אחרי החלפת רצועה','לא מגיע לטמפרטורת היעד בימים חמים'] },
-  x900:   { en:['Error 0x4F on boot','Labels feeding crooked'],
-            he:['שגיאה 0x4F בהדלקה','תוויות נמשכות עקום'] },
+  ro5000: { en:['Unit shows error E47, what do I do?','Output flow dropped 30%','Leak at the membrane housing'] },
+  rtu80:  { en:['Error F08 right after a belt change','Not reaching setpoint on hot days'] },
+  x900:   { en:['Error 0x4F on boot','Labels feeding crooked'] },
 };
 
 /* Knowledge base: keyword-matched canned answers (mockup of the RAG pipeline) */
 const KB = {
   ro5000: [
-    { match:/e47|differential|מציגה שגיאה|pressure drop/i, confidence:'high',
+    { match:/e47|differential|pressure drop/i, confidence:'high',
       head:'<span class="mono ltr">E47</span> = high differential pressure across the membrane stage — most often fouling, but check the cheap causes first.',
       safety:'System operates at 16 bar. Depressurize via valve V-3 before opening membrane housings.',
       steps:[
@@ -926,14 +873,14 @@ const KB = {
         { t:'Inspect the permeate line behind the frame', d:'A kinked permeate line raises differential pressure within minutes. Re-route and re-check.', field:true },
         { t:'Run CIP cleaning cycle', d:'Use low-pH cleaner if the pressure drop exceeds 15%.', src:'§6.3 · p.58' },
       ]},
-    { match:/flow|ספיקה|output|gpm/i, confidence:'medium',
+    { match:/flow|output|gpm/i, confidence:'medium',
       head:'A 30% flow drop with no error code usually points to feed-side restriction rather than membranes.',
       steps:[
         { t:'Check feed pressure at gauge P-1', d:'Should read 3.5–4.5 bar before the pump. Below 3 bar → upstream restriction.', src:'§5.2 · p.49' },
         { t:'Swap 5µ sediment prefilter', d:'Part PN AP-CF-505. Typical service life 4–6 weeks on municipal feed.', src:'§5.4 · p.51' },
         { t:'Verify with a normalized flow reading', d:'Compare against commissioning baseline before touching membranes.' },
       ]},
-    { match:/leak|נזילה|drip/i, confidence:'medium',
+    { match:/leak|drip/i, confidence:'medium',
       head:'Housing leaks are almost always O-ring seats, not the housing itself.',
       safety:'Depressurize via valve V-3 and lock out the feed pump before opening any housing.',
       steps:[
@@ -949,7 +896,7 @@ const KB = {
       ]},
   ],
   rtu80: [
-    { match:/f08|belt|רצועה/i, confidence:'high',
+    { match:/f08|belt/i, confidence:'high',
       head:'<span class="mono ltr">F08</span> = blower over-current. After a belt change this is nearly always pulley alignment, not the motor.',
       safety:'Lock out the disconnect before reaching into the blower compartment — auto-restart is enabled by default.',
       steps:[
@@ -957,7 +904,7 @@ const KB = {
         { t:'Re-tension the belt', d:'Deflection 12–15 mm at mid-span per the service chart.', src:'§4.6 · p.33' },
         { t:'Clear the fault and watch amps', d:'Should settle below 8.2 A within 60 seconds.', src:'§9.2 · p.71' },
       ]},
-    { match:/setpoint|hot|טמפרטורת|cool/i, confidence:'medium',
+    { match:/setpoint|hot|cool/i, confidence:'medium',
       head:'Capacity loss on hot days usually means a dirty condenser coil or low charge — check airflow first.',
       steps:[
         { t:'Inspect and rinse the condenser coil', d:'Rinse top-down with low-pressure water only.', src:'§6.1 · p.44' },
@@ -965,13 +912,13 @@ const KB = {
       ]},
   ],
   x900: [
-    { match:/0x4f|4f|boot|הדלקה/i, confidence:'high',
+    { match:/0x4f|4f|boot/i, confidence:'high',
       head:'<span class="mono ltr">0x4F</span> at boot is a known printhead-EEPROM handshake bug — fixed in firmware 3.1.2.',
       steps:[
         { t:'Update firmware to 3.1.2 or later', d:'USB update takes ~4 minutes; the printer must stay powered.', field:true },
         { t:'If the error persists, reseat the printhead cable', d:'Connector J4, latch fully closed.', src:'§3.2 · p.18' },
       ]},
-    { match:/crook|feed|jam|עקום|תוויות/i, confidence:'medium',
+    { match:/crook|feed|jam/i, confidence:'medium',
       head:'Crooked feeding is usually the media guides, not the rollers.',
       steps:[
         { t:'Re-seat the media guides snug to the roll', d:'Guides should touch the media without bowing it.', src:'§2.4 · p.12' },
@@ -1187,9 +1134,9 @@ function answer(q){
   }, reduced ? 60 : 1250);
 }
 const CONF = {
-  high:   { cls:'high',   ic:'check',   en:'High confidence — grounded in manual', he:'ביטחון גבוה — מבוסס על המדריך' },
-  medium: { cls:'medium', ic:'halfdot', en:'Medium — verify on site',              he:'ביטחון בינוני — לאמת בשטח' },
-  low:    { cls:'low',    ic:'alert',   en:'Low — escalate to senior tech',        he:'ביטחון נמוך — להסלים לטכנאי בכיר' },
+  high:   { cls:'high',   ic:'check',   en:'High confidence — grounded in manual' },
+  medium: { cls:'medium', ic:'halfdot', en:'Medium — verify on site' },
+  low:    { cls:'low',    ic:'alert',   en:'Low — escalate to senior tech' },
 };
 let answerSeq = 0;
 function renderAnswer(a, q){
@@ -1373,21 +1320,6 @@ function toast(key, kind){
 }
 
 /* ================= Settings ================= */
-function setLang(l){
-  lang = l;
-  document.documentElement.lang = l;
-  document.documentElement.dir = l === 'he' ? 'rtl' : 'ltr';
-  $('langEn').classList.toggle('on', l === 'en');
-  $('langHe').classList.toggle('on', l === 'he');
-  document.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
-  document.querySelectorAll('[data-i18n-ph]').forEach(n => { n.placeholder = t(n.dataset.i18nPh); });
-  renderEquipment($('eqSearch').value);
-  renderPacks(); renderSubmissions(); renderTabbars();
-  if(currentEq){
-    $('chatEqMeta').textContent = `${nManuals(currentEq.manuals)} · ${nFixes(currentEq.fixes)}`;
-    if(!chatStarted[currentEq.id]) renderChatGreeting();
-  }
-}
 function setScale(v){
   document.documentElement.style.fontSize = v + '%';
   $('fsVal').textContent = v + '%';
