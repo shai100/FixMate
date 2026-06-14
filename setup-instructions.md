@@ -1,7 +1,7 @@
 # FixMate — Setup From Scratch
 
 How to bring a FixMate development environment up on a fresh machine. Reflects the
-repository state through Phase 1 (infrastructure + schema/RLS). Keep this file in sync
+repository state through Phase 2 (infrastructure, schema/RLS, LLM provider abstraction). Keep this file in sync
 with the codebase — see [Keeping this document current](#keeping-this-document-current).
 
 ---
@@ -139,16 +139,28 @@ If a model is missing, the script prints the exact `ollama pull` command to fix 
 
 ```bash
 pytest tests/db -v
+pytest tests/llm -v
 ```
 
 The `migrated_db` fixture runs `alembic upgrade head` automatically, so tests work against a
 real Postgres (no mocks — per CLAUDE.md §4.3). All schema + RLS tests should pass (8/8 as of
-Phase 1). Run linting/formatting too:
+Phase 1). The `tests/llm` suite covers the LLM provider abstraction (Phase 2); its
+`@pytest.mark.integration` cases hit the live Ollama container, so keep `docker compose up -d`
+running. Run linting/formatting too:
 
 ```bash
 ruff check
 ruff format --check
 ```
+
+Smoke-test the LLM provider abstraction end-to-end (Phase 2 standalone check):
+
+```bash
+python -m fixmate.llm.cli "Say OK"                 # uses LLM_PROVIDER (default: ollama)
+python -m fixmate.llm.cli "Say OK" --provider anthropic   # requires ANTHROPIC_API_KEY
+```
+
+Expect a line like `[ollama/qwen3:4b] OK`.
 
 ---
 
