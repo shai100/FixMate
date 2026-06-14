@@ -27,7 +27,7 @@
 | 1 | Schema, migrations, RLS tenancy | `pytest tests/db -v` | ☑ |
 | 2 | LLM provider abstraction | `python -m fixmate.llm.cli "ping"` + `pytest tests/llm -v` | ☐ |
 | 3 | Ingestion pipeline (PDF→chunks+figures→index) | `python -m fixmate.ingestion.cli <pdf> --org demo` | ☐ |
-| 4 | Hybrid retrieval (vector+FTS+RRF+boost) | `python -m fixmate.retrieval.cli "E47" --org demo` | ☐ |
+| 4 | Hybrid retrieval (vector+FTS+RRF+boost) | `python -m fixmate.retrieval.cli "E47" --org demo` | ☑ |
 | 5 | Answer service (RAG, citations, confidence, groundedness, logging) | `python -m fixmate.answers.cli "How do I fix E47?" --org demo` | ☐ |
 | 6 | HTTP API + dev auth + conversations | `uvicorn fixmate.api.main:app` + `pytest tests/api -v` | ☐ |
 | 7 | Feedback + candidate-fix submission | `pytest tests/feedback -v` | ☐ |
@@ -337,7 +337,7 @@ Implement `chunk_pages` (sentence-boundary split, char budget ~800 ≈ <512 toke
 
 **Files:** Create `fixmate/retrieval/vector.py`, `keyword.py`, `fusion.py`, `rerank.py`, `service.py`, `cli.py`; tests `tests/retrieval/test_fusion.py`, `tests/retrieval/test_search_integration.py`.
 
-- [ ] **4.1 Failing test — RRF (pure unit):**
+- [x] **4.1 Failing test — RRF (pure unit):**
 
 ```python
 from fixmate.retrieval.fusion import reciprocal_rank_fusion
@@ -352,7 +352,7 @@ def test_field_fix_boost_promotes_fix():
     assert boosted["fix1"] > boosted["manual1"]
 ```
 
-- [ ] **4.2 Implement `fusion.py`:**
+- [x] **4.2 Implement `fusion.py`:**
 
 ```python
 from collections import defaultdict
@@ -374,10 +374,10 @@ def apply_field_fix_boost(scores: dict[str, float], field_fix_ids: set[str],
 ```
 Run → PASS → commit.
 
-- [ ] **4.3 Vector + keyword search** (integration test): `vector.py` = cosine KNN via pgvector (`ORDER BY embedding <=> :qvec LIMIT 20`); `keyword.py` = `WHERE tsv @@ plainto_tsquery('english', :q) ORDER BY ts_rank(...) LIMIT 20` (query config must match the `'english'` tsvector config from Phase 1). Test seeds chunks and asserts: query "E47" — keyword search finds the exact-code chunk even when vector search ranks it low (the hybrid justification, spec §5.2). All queries run inside `session_for_org` (RLS scopes tenancy automatically).
-- [ ] **4.4 Reranker** `rerank.py`: MVP = embed query + candidate texts with BGE-M3, re-sort by cosine similarity; return `(chunk, score∈[0,1])`. Interface: `async def rerank(query: str, chunks: list[Chunk]) -> list[tuple[Chunk, float]]`. (Cross-encoder `bge-reranker-v2-m3` is a drop-in upgrade later — same signature.) Test: known-relevant chunk ranks first on fixture data.
-- [ ] **4.5 `service.py`:** `async def search(org_id, equipment_id, query, top_k=8) -> list[ScoredChunk]` — embed query → vector + keyword in parallel → RRF → field-fix boost → rerank → top_k. `ScoredChunk = (chunk_id, document_id, source_type, page, text, score, fix_id|None)`.
-- [ ] **4.6 CLI:** `python -m fixmate.retrieval.cli "E47 error" --org demo` prints ranked table (score, source_type, page, first 80 chars). Run against Phase 3 ingested data. Commit.
+- [x] **4.3 Vector + keyword search** (integration test): `vector.py` = cosine KNN via pgvector (`ORDER BY embedding <=> :qvec LIMIT 20`); `keyword.py` = `WHERE tsv @@ plainto_tsquery('english', :q) ORDER BY ts_rank(...) LIMIT 20` (query config must match the `'english'` tsvector config from Phase 1). Test seeds chunks and asserts: query "E47" — keyword search finds the exact-code chunk even when vector search ranks it low (the hybrid justification, spec §5.2). All queries run inside `session_for_org` (RLS scopes tenancy automatically).
+- [x] **4.4 Reranker** `rerank.py`: MVP = embed query + candidate texts with BGE-M3, re-sort by cosine similarity; return `(chunk, score∈[0,1])`. Interface: `async def rerank(query: str, chunks: list[Chunk]) -> list[tuple[Chunk, float]]`. (Cross-encoder `bge-reranker-v2-m3` is a drop-in upgrade later — same signature.) Test: known-relevant chunk ranks first on fixture data.
+- [x] **4.5 `service.py`:** `async def search(org_id, equipment_id, query, top_k=8) -> list[ScoredChunk]` — embed query → vector + keyword in parallel → RRF → field-fix boost → rerank → top_k. `ScoredChunk = (chunk_id, document_id, source_type, page, text, score, fix_id|None)`.
+- [x] **4.6 CLI:** `python -m fixmate.retrieval.cli "E47 error" --org demo` prints ranked table (score, source_type, page, first 80 chars). Run against Phase 3 ingested data. Commit.
 
 ---
 
