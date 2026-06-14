@@ -132,6 +132,18 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 - **Why:** an audit trail for engineering decisions, mirroring the product's own auditability value — any engineer can reconstruct what was verified and how.
 - Examples: `docs/phase-0-compose-infrastructure.md`, `docs/phase-1-schema-rls.md`.
 
+### 4.8 Setup Instructions Stay Current
+- **`setup-instructions.md` (repo root) is the from-scratch environment guide.** Whenever a commit changes how the system is set up, **update `setup-instructions.md` in that same commit.**
+- **Triggers that require an update:**
+  - New/removed/changed Docker Compose services, images, or ports (`docker-compose.yml`).
+  - New required environment variables or changed defaults (`.env.example`, `fixmate/core/settings.py`).
+  - New setup steps: migrations, seed/bootstrap scripts, model pulls, role provisioning.
+  - New prerequisites (runtime versions, system tools) or changed dependencies (`pyproject.toml`).
+  - Changes to verification commands (`scripts/healthcheck.py`, test invocation).
+  - A phase that flips a previously-gated service on by default (e.g. Keycloak `auth` profile in Phase 9).
+- **Remove stale steps:** if a change makes an instruction obsolete, correct or delete it — never leave instructions that no longer match the code.
+- **Why:** a stale setup guide silently breaks onboarding and masquerades as ground truth. Treating it as a first-class artifact (like the build log, §4.7) keeps the "clone → live locally" path honest.
+
 ---
 
 ## 5. Decision-Making Patterns

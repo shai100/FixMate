@@ -1,0 +1,190 @@
+# FixMate — Setup From Scratch
+
+How to bring a FixMate development environment up on a fresh machine. Reflects the
+repository state through Phase 1 (infrastructure + schema/RLS). Keep this file in sync
+with the codebase — see [Keeping this document current](#keeping-this-document-current).
+
+---
+
+## 1. Prerequisites
+
+Install these before starting:
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| **Python** | ≥ 3.12 | Matches `requires-python` in `pyproject.toml`. |
+| **Docker + Docker Compose** | recent | Runs Postgres, Redis, MinIO, Ollama. |
+| **Git** | any | To clone the repo. |
+| **NVIDIA GPU + driver** (optional) | — | For local Ollama acceleration (spec §8.3). Without a GPU, Ollama runs on CPU (slower) or run Ollama natively on Windows — see note in `docker-compose.yml`. |
+
+The local stack targets the spec §8 "full local-PC profile". A 4 GB GPU is enough for the
+`qwen3:4b` (Q4 generation) + `bge-m3` (CPU embeddings) profile.
+
+---
+
+## 2. Clone and create a Python environment
+
+```bash
+git clone <repo-url> FixMate
+cd FixMate
+
+python -m venv .venv
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# macOS/Linux:
+# source .venv/bin/activate
+
+pip install -e ".[dev]"
+```
+
+`pip install -e ".[dev]"` installs the `fixmate` package in editable mode plus the dev
+extras (`pytest`, `pytest-asyncio`, `ruff`).
+
+---
+
+## 3. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+`.env` is gitignored. The defaults match the Docker Compose services, so no edits are
+required for a default local run. Key knobs (see `.env.example` / `fixmate/core/settings.py`):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DATABASE_URL` | `...fixmate:fixmate@localhost:5432/fixmate` | Owner role. Used for migrations + org bootstrap. |
+| `DATABASE_APP_URL` | `...fixmate_app:fixmate_app@localhost:5432/fixmate` | App role — **RLS enforced** (no BYPASSRLS). The application connects as this. |
+| `REDIS_URL` | `redis://localhost:6379/0` | Celery broker (Phase 3+). |
+| `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` / `S3_BUCKET` | MinIO defaults | Object storage. |
+| `LLM_PROVIDER` | `ollama` | `ollama` (local) or `anthropic` (production). |
+| `OLLAMA_GENERATION_MODEL` | `qwen3:4b` | Local generation model. |
+| `OLLAMA_EMBEDDING_MODEL` | `bge-m3` | Local embedding model (1024-dim — matches `chunks.embedding`). |
+| `ANTHROPIC_API_KEY` | _(empty)_ | Required only when `LLM_PROVIDER=anthropic`. Never commit. |
+| `DEV_AUTH` | `true` | Phase 6 header auth. **Must be `false` outside local.** |
+
+---
+
+## 4. Start the infrastructure
+
+```bash
+docker compose up -d
+```
+
+This starts the four MVP services: `postgres` (pgvector/pg16), `redis`, `minio`, `ollama`.
+`keycloak` is behind the `auth` compose profile and is **not** started for MVP setup
+(it comes online in Phase 9 via `docker compose --profile auth up -d`).
+
+Confirm services are up and Postgres is healthy:
+
+```bash
+docker compose ps
+```
+
+Expect `postgres` to show `Up (healthy)`.
+
+---
+
+## 5. Pull the local LLM models
+
+The Ollama container starts empty. Pull the two required models:
+
+```bash
+docker compose exec ollama ollama pull qwen3:4b
+docker compose exec ollama ollama pull bge-m3
+```
+
+(If `OLLAMA_*` model names in `.env` differ, pull those instead. The healthcheck in the
+next step prints the exact `ollama pull` command for any missing model.)
+
+---
+
+## 6. Apply database migrations
+
+This creates the schema, the `vector` extension, indexes (HNSW + GIN), RLS policies, **and
+the non-superuser `fixmate_app` role** that the application connects as:
+
+```bash
+alembic upgrade head
+```
+
+`alembic.ini` reads the DB URL from `fixmate.core.settings`, so no URL needs to be hardcoded.
+There is no separate "create the app role" step — the migration provisions `fixmate_app`
+(with its `LOGIN` password) and grants.
+
+---
+
+## 7. Verify the environment
+
+`scripts/healthcheck.py` probes every Compose service and reports one status line each:
+
+```bash
+python scripts/healthcheck.py
+```
+
+Expected output (no `MISSING model` lines):
+
+```
+postgres OK PostgreSQL 16.x ...
+redis OK
+minio OK
+ollama OK, models: ['bge-m3:latest', 'qwen3:4b']
+```
+
+If a model is missing, the script prints the exact `ollama pull` command to fix it.
+
+---
+
+## 8. Run the test suite
+
+```bash
+pytest tests/db -v
+```
+
+The `migrated_db` fixture runs `alembic upgrade head` automatically, so tests work against a
+real Postgres (no mocks — per CLAUDE.md §4.3). All schema + RLS tests should pass (8/8 as of
+Phase 1). Run linting/formatting too:
+
+```bash
+ruff check
+ruff format --check
+```
+
+---
+
+## 9. Service endpoints reference
+
+| Service | Endpoint | Credentials |
+|---------|----------|-------------|
+| Postgres | `localhost:5432` | `fixmate` / `fixmate` (owner); `fixmate_app` / `fixmate_app` (app) |
+| Redis | `localhost:6379` | — |
+| MinIO API | `localhost:9000` | `fixmate` / `fixmate123` |
+| MinIO Console | `localhost:9001` | `fixmate` / `fixmate123` |
+| Ollama | `localhost:11434` | — |
+| Keycloak (Phase 9, `auth` profile) | `localhost:8080` | `admin` / `admin` |
+
+---
+
+## 10. Teardown
+
+```bash
+docker compose down          # stop services, keep data
+docker compose down -v       # stop services AND delete volumes (pgdata, miniodata, ollamadata)
+```
+
+---
+
+## Keeping this document current
+
+Per CLAUDE.md §4.7, this file is part of the project's audit trail. **Whenever a change
+affects how the system is set up from scratch, update this document in the same commit.**
+That includes (non-exhaustive):
+
+- New or removed Compose services / changed images or ports (`docker-compose.yml`).
+- New required environment variables or changed defaults (`.env.example`, `fixmate/core/settings.py`).
+- New setup steps: migrations, seed scripts, model pulls, role provisioning.
+- New prerequisites (language/runtime versions, system tools), changed dependencies (`pyproject.toml`).
+- Changes to verification commands (`scripts/healthcheck.py`, test invocation).
+- A phase coming online that flips a previously-gated service on by default (e.g. Keycloak/`auth` profile in Phase 9).
+
+If a change makes a step here obsolete, remove or correct it — don't leave stale instructions.
