@@ -305,7 +305,7 @@ class AnthropicProvider:
 
 **Files:** Create `fixmate/ingestion/pdf.py` (PyMuPDF text+figure extraction), `fixmate/ingestion/chunking.py`, `fixmate/ingestion/figures.py` (caption via provider, upload to MinIO), `fixmate/ingestion/pipeline.py` (orchestrates: parse → chunk → embed → store), `fixmate/ingestion/tasks.py` (Celery wrapper), `fixmate/ingestion/cli.py`, `fixmate/core/storage.py` (boto3 MinIO helper, keys prefixed `org_id/` — CLAUDE.md §6), minimal CRUD for equipment profiles/documents in `fixmate/ingestion/registry.py`, tests in `tests/ingestion/`, fixture PDF `tests/fixtures/sample-manual.pdf` (generate with PyMuPDF in a fixture: 3 pages, known sentences incl. "Error E47: concentrate valve blocked", a torque spec "tighten to 12 Nm", one embedded image).
 
-- [ ] **3.1 Failing test — chunking** `tests/ingestion/test_chunking.py`:
+- [x] **3.1 Failing test — chunking** `tests/ingestion/test_chunking.py`:
 
 ```python
 from fixmate.ingestion.chunking import chunk_pages
@@ -319,14 +319,14 @@ def test_chunks_carry_page_numbers_and_respect_size():
 ```
 Implement `chunk_pages` (sentence-boundary split, char budget ~800 ≈ <512 tokens — reranker stability constraint, CLAUDE.md §4.4). Run → PASS → commit.
 
-- [ ] **3.2 Failing test — PDF extraction:** parse fixture PDF → page texts contain "E47"; exactly 1 figure extracted with page + bbox. Implement `pdf.py` (`fitz.open`; `page.get_text()`; `page.get_images` + `Pixmap` bytes). Run → PASS → commit.
-- [ ] **3.3 Failing test — end-to-end ingest (integration):** `ingest_document(org_id, equipment_id, pdf_path)` →
+- [x] **3.2 Failing test — PDF extraction:** parse fixture PDF → page texts contain "E47"; exactly 1 figure extracted with page + bbox. Implement `pdf.py` (`fitz.open`; `page.get_text()`; `page.get_images` + `Pixmap` bytes). Run → PASS → commit.
+- [x] **3.3 Failing test — end-to-end ingest (integration):** `ingest_document(org_id, equipment_id, pdf_path)` →
   - a `documents` row (version 1), N `chunks` rows with non-null 1024-dim embeddings and `source_type='manual'`,
   - 1 `figures` row whose caption is non-empty and whose `storage_key` exists in MinIO,
   - re-ingesting same file bumps `version` to 2 and sets `superseded_by` on v1 (FR-9).
   Implement `pipeline.py` + `storage.py` + `registry.py`. Run → PASS → commit.
-- [ ] **3.4 Celery wrapper** `tasks.py`: `@app.task ingest_document_task(...)` calling the sync entry; worker boots with `celery -A fixmate.ingestion.tasks worker -l info --pool=solo` (`--pool=solo` is the Windows-compatible pool). Smoke test only (enqueue + poll result). Commit.
-- [ ] **3.5 CLI:** `python -m fixmate.ingestion.cli tests/fixtures/sample-manual.pdf --org demo --equipment "Pump X" [--async]` — creates org/equipment if missing (dev convenience), prints chunk/figure counts.
+- [x] **3.4 Celery wrapper** `tasks.py`: `@app.task ingest_document_task(...)` calling the sync entry; worker boots with `celery -A fixmate.ingestion.tasks worker -l info --pool=solo` (`--pool=solo` is the Windows-compatible pool). Smoke test only (enqueue + poll result). Commit.
+- [x] **3.5 CLI:** `python -m fixmate.ingestion.cli tests/fixtures/sample-manual.pdf --org demo --equipment "Pump X" [--async]` — creates org/equipment if missing (dev convenience), prints chunk/figure counts.
 
 **Run it standalone:** the CLI command above, then verify:
 `docker exec -it $(docker compose ps -q postgres) psql -U fixmate -c "select count(*), source_type from chunks group by source_type;"`

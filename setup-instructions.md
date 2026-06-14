@@ -1,7 +1,7 @@
 # FixMate — Setup From Scratch
 
 How to bring a FixMate development environment up on a fresh machine. Reflects the
-repository state through Phase 2 (infrastructure, schema/RLS, LLM provider abstraction). Keep this file in sync
+repository state through Phase 3 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline). Keep this file in sync
 with the codebase — see [Keeping this document current](#keeping-this-document-current).
 
 ---
@@ -140,6 +140,7 @@ If a model is missing, the script prints the exact `ollama pull` command to fix 
 ```bash
 pytest tests/db -v
 pytest tests/llm -v
+pytest tests/ingestion -v
 ```
 
 The `migrated_db` fixture runs `alembic upgrade head` automatically, so tests work against a
@@ -161,6 +162,41 @@ python -m fixmate.llm.cli "Say OK" --provider anthropic   # requires ANTHROPIC_A
 ```
 
 Expect a line like `[ollama/qwen3:4b] OK`.
+
+Ingest a manual end-to-end (Phase 3 standalone check). This creates the org/equipment
+if missing, parses the PDF, embeds chunks, captions + stores figures, and writes rows:
+
+```bash
+python -m fixmate.ingestion.cli tests/fixtures/sample-manual.pdf --org demo --equipment "Pump X"
+```
+
+Expect `ingested document <uuid>: 3 chunks, 1 figures`. Verify the chunks landed:
+
+```bash
+docker compose exec postgres psql -U fixmate -c "select count(*), source_type from chunks group by source_type;"
+```
+
+Figure captioning uses the configured LLM provider; the local `ollama` backend has no
+vision (spec §8.3), so figures get a deterministic fallback caption. Set
+`LLM_PROVIDER=anthropic` (with `ANTHROPIC_API_KEY`) for real Claude captions.
+
+### Async ingestion via Celery (optional)
+
+The `--async` flag enqueues ingestion on the Celery worker instead of running inline.
+Start a worker (the `--pool=solo` pool is required on Windows):
+
+```bash
+celery -A fixmate.ingestion.tasks worker -l info --pool=solo
+```
+
+Then enqueue:
+
+```bash
+python -m fixmate.ingestion.cli tests/fixtures/sample-manual.pdf --org demo --equipment "Pump X" --async
+```
+
+The CLI prints the task id; the worker logs the resulting document id. Redis (already in
+the Compose stack) is the broker and result backend.
 
 ---
 
