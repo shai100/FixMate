@@ -29,7 +29,7 @@
 | 3 | Ingestion pipeline (PDF→chunks+figures→index) | `python -m fixmate.ingestion.cli <pdf> --org demo` | ☐ |
 | 4 | Hybrid retrieval (vector+FTS+RRF+boost) | `python -m fixmate.retrieval.cli "E47" --org demo` | ☑ |
 | 5 | Answer service (RAG, citations, confidence, groundedness, logging) | `python -m fixmate.answers.cli "How do I fix E47?" --org demo` | ☑ |
-| 6 | HTTP API + dev auth + conversations | `uvicorn fixmate.api.main:app` + `pytest tests/api -v` | ☐ |
+| 6 | HTTP API + dev auth + conversations | `uvicorn fixmate.api.main:app` + `pytest tests/api -v` | ☑ |
 | 7 | Feedback + candidate-fix submission | `pytest tests/feedback -v` | ☐ |
 | 8 | Curation workflow + pre-screen + audit + index sync | `pytest tests/curation -v` | ☐ |
 | 9 | Keycloak OIDC (replace dev auth) | `pytest tests/auth -v` (live Keycloak) | ☐ |
@@ -440,14 +440,14 @@ Run → PASS → commit.
 
 **Files:** Create `fixmate/api/main.py`, `fixmate/api/deps.py`, `fixmate/api/routers/{ask,conversations,equipment,documents}.py`; tests `tests/api/` (httpx `ASGITransport`).
 
-- [ ] **6.1 Dev auth dependency** `deps.py`: `get_current_user(request) -> AuthContext(org_id, user_id, role)`. When `DEV_AUTH=true`: read `X-Org-Id`/`X-User-Id`/`X-Role` headers. When false: defer to OIDC validator (Phase 9 fills this in; until then raise 501). **Guard:** at startup, refuse to boot if `DEV_AUTH=true` and `ENV=production`. Org id always comes from auth context, never from query params (CLAUDE.md §6).
-- [ ] **6.2 Endpoints (TDD each: failing httpx test → implement → pass → commit):**
+- [x] **6.1 Dev auth dependency** `deps.py`: `get_current_user(request) -> AuthContext(org_id, user_id, role)`. When `DEV_AUTH=true`: read `X-Org-Id`/`X-User-Id`/`X-Role` headers. When false: defer to OIDC validator (Phase 9 fills this in; until then raise 501). **Guard:** at startup, refuse to boot if `DEV_AUTH=true` and `ENV=production`. Org id always comes from auth context, never from query params (CLAUDE.md §6).
+- [x] **6.2 Endpoints (TDD each: failing httpx test → implement → pass → commit):**
   - `POST /conversations` / `GET /conversations/{id}` — create, fetch with messages.
   - `POST /conversations/{id}/ask {question}` → stores user message, calls `compose_answer` with conversation history (FR-5), stores assistant message, returns answer payload (text, confidence, citations with document title + page, figure URLs, escalated, message_id).
   - `POST /equipment` / `GET /equipment` — minimal profiles CRUD (FR-10).
   - `POST /documents/upload` (multipart) → save to MinIO → enqueue `ingest_document_task` → 202 + document id; `GET /documents/{id}` reports ingestion status (FR-8).
   - Tenancy test: org A's conversation 404s under org B's headers (RLS proves itself through the API).
-- [ ] **6.3 Run it standalone:** `uvicorn fixmate.api.main:app --reload` then:
+- [x] **6.3 Run it standalone:** `uvicorn fixmate.api.main:app --reload` then:
 
 ```powershell
 curl -X POST localhost:8000/conversations -H "X-Org-Id: <uuid>" -H "X-User-Id: <uuid>" -H "X-Role: tech"

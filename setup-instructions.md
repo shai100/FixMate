@@ -1,7 +1,7 @@
 # FixMate — Setup From Scratch
 
 How to bring a FixMate development environment up on a fresh machine. Reflects the
-repository state through Phase 5 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service). Keep this file in sync
+repository state through Phase 6 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service, HTTP API). Keep this file in sync
 with the codebase — see [Keeping this document current](#keeping-this-document-current).
 
 ---
@@ -62,6 +62,7 @@ required for a default local run. Key knobs (see `.env.example` / `fixmate/core/
 | `OLLAMA_EMBEDDING_MODEL` | `bge-m3` | Local embedding model (1024-dim — matches `chunks.embedding`). |
 | `ANTHROPIC_API_KEY` | _(empty)_ | Required only when `LLM_PROVIDER=anthropic`. Never commit. |
 | `DEV_AUTH` | `true` | Phase 6 header auth. **Must be `false` outside local.** |
+| `ENV` | `local` | Deployment environment. The API refuses to boot when `DEV_AUTH=true` and `ENV` is not `local`. |
 
 ---
 
@@ -143,6 +144,7 @@ pytest tests/llm -v
 pytest tests/ingestion -v
 pytest tests/retrieval -v
 pytest tests/answers -v
+pytest tests/api -v
 ```
 
 The `tests/answers` suite covers the answer service (Phase 5): pure-unit groundedness
@@ -199,6 +201,32 @@ Expect a `[high]` or `[medium]` answer with inline citations and an `answer_log_
 same command with `LLM_PROVIDER=anthropic` runs the identical code path on Claude (spec
 §8.3 backend switch). An out-of-corpus question (e.g. "calibrate the flux capacitor")
 prints `[low] ESCALATED` with no fabricated answer.
+
+Run the HTTP API (Phase 6 standalone check). The API exposes conversations, the RAG
+`ask` endpoint, equipment, and document upload behind dev-header auth:
+
+```bash
+uvicorn fixmate.api.main:app --reload      # serves on http://localhost:8000
+```
+
+With `DEV_AUTH=true` (the default), every request carries identity headers
+(`X-Org-Id` / `X-User-Id` / `X-Role`). Org id always comes from these headers, never a query
+param. The server **refuses to boot** if `DEV_AUTH=true` while `ENV` is not `local`. Example
+round-trip (substitute real org/user UUIDs — create them with the seed in a later phase, or
+insert an `organizations` + `users` row directly):
+
+```bash
+curl -s localhost:8000/health
+curl -s -X POST localhost:8000/conversations \
+  -H "X-Org-Id: <org-uuid>" -H "X-User-Id: <user-uuid>" -H "X-Role: tech" -d '{}'
+curl -s -X POST localhost:8000/conversations/<conversation-id>/ask \
+  -H "X-Org-Id: <org-uuid>" -H "X-User-Id: <user-uuid>" -H "X-Role: tech" \
+  -H "Content-Type: application/json" -d '{"question":"How do I fix error E47?"}'
+```
+
+The `tests/api` suite covers this layer; its `@pytest.mark.integration` cases drive the full
+RAG pipeline through `ask` (slow on the CPU profile) and enqueue a real Celery upload task
+(needs Redis), so keep `docker compose up -d` running.
 
 ### Async ingestion via Celery (optional)
 

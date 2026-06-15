@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
     dev_auth: bool = True
+    # Deployment environment. The API refuses to boot when dev_auth is true here
+    # outside "local" (header auth must never reach a real deployment — Phase 6.1).
+    env: str = "local"
 
 
 settings = Settings()
