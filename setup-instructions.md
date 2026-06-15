@@ -1,7 +1,7 @@
 # FixMate — Setup From Scratch
 
 How to bring a FixMate development environment up on a fresh machine. Reflects the
-repository state through Phase 6 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service, HTTP API). Keep this file in sync
+repository state through Phase 7 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service, HTTP API, feedback + candidate-fix submission). Keep this file in sync
 with the codebase — see [Keeping this document current](#keeping-this-document-current).
 
 ---
@@ -145,6 +145,7 @@ pytest tests/ingestion -v
 pytest tests/retrieval -v
 pytest tests/answers -v
 pytest tests/api -v
+pytest tests/feedback -v
 ```
 
 The `tests/answers` suite covers the answer service (Phase 5): pure-unit groundedness
@@ -227,6 +228,13 @@ curl -s -X POST localhost:8000/conversations/<conversation-id>/ask \
 The `tests/api` suite covers this layer; its `@pytest.mark.integration` cases drive the full
 RAG pipeline through `ask` (slow on the CPU profile) and enqueue a real Celery upload task
 (needs Redis), so keep `docker compose up -d` running.
+
+The API also exposes feedback (Phase 7): `POST /messages/{id}/feedback {helped, fix_text?, photos?}`.
+A positive signal reinforces the cited chunks (`chunks.positive_signals`); a negative signal with
+`fix_text` opens a candidate fix that lands in the curation queue (`state=pending_review`) with an
+audit event — it is never indexed, so it cannot be served until a curator approves it. The
+`tests/feedback` suite covers it; most cases are pure DB (fast), with one `@pytest.mark.integration`
+case proving a submitted fix never surfaces in retrieval.
 
 ### Async ingestion via Celery (optional)
 

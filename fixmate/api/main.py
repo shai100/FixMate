@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from fixmate.api.routers import ask, conversations, documents, equipment
+from fixmate.api.routers import ask, conversations, documents, equipment, feedback
 from fixmate.core.settings import settings
 
 
@@ -21,6 +21,7 @@ app.include_router(conversations.router)
 app.include_router(ask.router)
 app.include_router(equipment.router)
 app.include_router(documents.router)
+app.include_router(feedback.router)
 
 
 @app.get("/health", tags=["meta"])

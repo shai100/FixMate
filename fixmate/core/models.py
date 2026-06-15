@@ -202,6 +202,11 @@ class Chunk(Base):
     fix_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("fixes.id", ondelete="CASCADE")
     )
+    # Reinforcement signal (FR-13): incremented when a technician marks an answer
+    # that cited this chunk as helpful. Stored now; consumed by ranking later.
+    positive_signals: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM), nullable=False)
     # 'english' config gives stemming ("valves" matches "valve"); if more launch
     # languages are added later (FR-7), switch to 'simple' or per-language configs.

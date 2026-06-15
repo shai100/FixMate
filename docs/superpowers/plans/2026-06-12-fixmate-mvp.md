@@ -30,7 +30,7 @@
 | 4 | Hybrid retrieval (vector+FTS+RRF+boost) | `python -m fixmate.retrieval.cli "E47" --org demo` | ☑ |
 | 5 | Answer service (RAG, citations, confidence, groundedness, logging) | `python -m fixmate.answers.cli "How do I fix E47?" --org demo` | ☑ |
 | 6 | HTTP API + dev auth + conversations | `uvicorn fixmate.api.main:app` + `pytest tests/api -v` | ☑ |
-| 7 | Feedback + candidate-fix submission | `pytest tests/feedback -v` | ☐ |
+| 7 | Feedback + candidate-fix submission | `pytest tests/feedback -v` | ☑ |
 | 8 | Curation workflow + pre-screen + audit + index sync | `pytest tests/curation -v` | ☐ |
 | 9 | Keycloak OIDC (replace dev auth) | `pytest tests/auth -v` (live Keycloak) | ☐ |
 | 10 | Technician PWA (chat) | `npm run dev` in `web/` | ☐ |
@@ -460,11 +460,11 @@ curl -X POST localhost:8000/conversations/<id>/ask -H "..." -d '{"question":"How
 
 **Files:** Create `fixmate/feedback/service.py`, `fixmate/api/routers/feedback.py`; tests `tests/feedback/`.
 
-- [ ] **7.1 TDD:** `POST /messages/{id}/feedback {helped: bool, fix_text?, photos?}`:
+- [x] **7.1 TDD:** `POST /messages/{id}/feedback {helped: bool, fix_text?, photos?}`:
   - `helped=true` → `feedback` row; increments a `positive_signals` counter on the cited chunks (FR-13's reinforcement signal, stored now, used by ranking later).
   - `helped=false` + `fix_text` → `feedback` row **and** a `fixes` row in state `submitted` linked to question, answer_log, equipment, submitter (FR-12); immediately transitions to `pending_review` and writes an `audit_events` row.
   - Test: submitted fix is **not** retrievable via Phase 4 search (never serve unapproved fixes — spec §2.4).
-- [ ] **7.2 Commit.** Standalone: `pytest tests/feedback -v`.
+- [x] **7.2 Commit.** Standalone: `pytest tests/feedback -v`.
 
 ---
 

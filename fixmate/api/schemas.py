@@ -51,6 +51,18 @@ class AnswerOut(BaseModel):
     figures: list[FigureOut]
 
 
+class FeedbackRequest(BaseModel):
+    helped: bool
+    fix_text: str | None = None
+    photos: list[str] | None = None
+
+
+class FeedbackOut(BaseModel):
+    feedback_id: uuid.UUID
+    helped: bool
+    fix_id: uuid.UUID | None = None
+
+
 class CreateEquipment(BaseModel):
     name: str
     manufacturer: str | None = None
