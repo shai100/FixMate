@@ -28,7 +28,7 @@
 | 2 | LLM provider abstraction | `python -m fixmate.llm.cli "ping"` + `pytest tests/llm -v` | ☐ |
 | 3 | Ingestion pipeline (PDF→chunks+figures→index) | `python -m fixmate.ingestion.cli <pdf> --org demo` | ☐ |
 | 4 | Hybrid retrieval (vector+FTS+RRF+boost) | `python -m fixmate.retrieval.cli "E47" --org demo` | ☑ |
-| 5 | Answer service (RAG, citations, confidence, groundedness, logging) | `python -m fixmate.answers.cli "How do I fix E47?" --org demo` | ☐ |
+| 5 | Answer service (RAG, citations, confidence, groundedness, logging) | `python -m fixmate.answers.cli "How do I fix E47?" --org demo` | ☑ |
 | 6 | HTTP API + dev auth + conversations | `uvicorn fixmate.api.main:app` + `pytest tests/api -v` | ☐ |
 | 7 | Feedback + candidate-fix submission | `pytest tests/feedback -v` | ☐ |
 | 8 | Curation workflow + pre-screen + audit + index sync | `pytest tests/curation -v` | ☐ |

@@ -1,7 +1,7 @@
 # FixMate — Setup From Scratch
 
 How to bring a FixMate development environment up on a fresh machine. Reflects the
-repository state through Phase 3 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline). Keep this file in sync
+repository state through Phase 5 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service). Keep this file in sync
 with the codebase — see [Keeping this document current](#keeping-this-document-current).
 
 ---
@@ -141,7 +141,14 @@ If a model is missing, the script prints the exact `ollama pull` command to fix 
 pytest tests/db -v
 pytest tests/llm -v
 pytest tests/ingestion -v
+pytest tests/retrieval -v
+pytest tests/answers -v
 ```
+
+The `tests/answers` suite covers the answer service (Phase 5): pure-unit groundedness
+and confidence-band tests, plus `@pytest.mark.integration` composer tests that drive the
+full RAG pipeline against the live Ollama model — these are slow (minutes each on the CPU
+profile), so keep `docker compose up -d` running.
 
 The `migrated_db` fixture runs `alembic upgrade head` automatically, so tests work against a
 real Postgres (no mocks — per CLAUDE.md §4.3). All schema + RLS tests should pass (8/8 as of
@@ -179,6 +186,19 @@ docker compose exec postgres psql -U fixmate -c "select count(*), source_type fr
 Figure captioning uses the configured LLM provider; the local `ollama` backend has no
 vision (spec §8.3), so figures get a deterministic fallback caption. Set
 `LLM_PROVIDER=anthropic` (with `ANTHROPIC_API_KEY`) for real Claude captions.
+
+Ask a grounded, cited question end-to-end (Phase 5 standalone check). This runs hybrid
+retrieval → confidence gate → LLM compose → citation + groundedness validation → answer
+log:
+
+```bash
+python -m fixmate.answers.cli "How do I fix error E47?" --org demo --equipment "Pump X"
+```
+
+Expect a `[high]` or `[medium]` answer with inline citations and an `answer_log_id`. The
+same command with `LLM_PROVIDER=anthropic` runs the identical code path on Claude (spec
+§8.3 backend switch). An out-of-corpus question (e.g. "calibrate the flux capacitor")
+prints `[low] ESCALATED` with no fabricated answer.
 
 ### Async ingestion via Celery (optional)
 
