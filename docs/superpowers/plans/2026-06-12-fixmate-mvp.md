@@ -31,7 +31,7 @@
 | 5 | Answer service (RAG, citations, confidence, groundedness, logging) | `python -m fixmate.answers.cli "How do I fix E47?" --org demo` | ☑ |
 | 6 | HTTP API + dev auth + conversations | `uvicorn fixmate.api.main:app` + `pytest tests/api -v` | ☑ |
 | 7 | Feedback + candidate-fix submission | `pytest tests/feedback -v` | ☑ |
-| 8 | Curation workflow + pre-screen + audit + index sync | `pytest tests/curation -v` | ☐ |
+| 8 | Curation workflow + pre-screen + audit + index sync | `pytest tests/curation -v` | ☑ |
 | 9 | Keycloak OIDC (replace dev auth) | `pytest tests/auth -v` (live Keycloak) | ☐ |
 | 10 | Technician PWA (chat) | `npm run dev` in `web/` | ☐ |
 | 11 | Curator/Admin console views | `npm run dev`, role=curator | ☐ |
@@ -472,7 +472,7 @@ curl -X POST localhost:8000/conversations/<id>/ask -H "..." -d '{"question":"How
 
 **Files:** Create `fixmate/curation/states.py`, `service.py`, `prescreen.py`, `fixmate/api/routers/curation.py`; tests `tests/curation/`.
 
-- [ ] **8.1 Failing tests — state machine** (pure unit):
+- [x] **8.1 Failing tests — state machine** (pure unit):
 
 ```python
 from fixmate.curation.states import can_transition
@@ -490,7 +490,7 @@ def test_illegal_transitions_blocked():
     assert not can_transition("unsafe", "approved")
 ```
 
-- [ ] **8.2 Implement `states.py`:**
+- [x] **8.2 Implement `states.py`:**
 
 ```python
 ALLOWED_TRANSITIONS: set[tuple[str, str]] = {
@@ -507,15 +507,15 @@ def can_transition(src: str, dst: str) -> bool:
 ```
 Run → PASS → commit.
 
-- [ ] **8.3 AI pre-screen** `prescreen.py` (FR-15): provider `complete(json_response=True)` with a prompt that evaluates the candidate fix against top retrieved manual chunks and returns `{"hazard_flags": [...categories: electrical|pressure|chemical|gas|lifting...], "contradictions": [...], "missing_safety_steps": [...], "overall_risk": "low|medium|high"}`. Validate JSON (retry once on parse failure, then store `{"error": "prescreen_failed"}` — **a failed pre-screen never blocks the queue and never auto-rejects; it advises humans only** (spec §2.5)). Integration test: a fix text containing "bypass the pressure relief valve" yields ≥1 hazard flag.
-- [ ] **8.4 Curation service (TDD, integration):**
+- [x] **8.3 AI pre-screen** `prescreen.py` (FR-15): provider `complete(json_response=True)` with a prompt that evaluates the candidate fix against top retrieved manual chunks and returns `{"hazard_flags": [...categories: electrical|pressure|chemical|gas|lifting...], "contradictions": [...], "missing_safety_steps": [...], "overall_risk": "low|medium|high"}`. Validate JSON (retry once on parse failure, then store `{"error": "prescreen_failed"}` — **a failed pre-screen never blocks the queue and never auto-rejects; it advises humans only** (spec §2.5)). Integration test: a fix text containing "bypass the pressure relief valve" yields ≥1 hazard flag.
+- [x] **8.4 Curation service (TDD, integration):**
   - `review_queue(org_id)` — pending fixes with question, original answer, proposed text, top manual chunks, prescreen report (FR-15's side-by-side payload).
   - `approve(fix_id, curator, edited_text=None)` — guard `can_transition`; guard reviewer role ∈ (curator, admin) (FR-14); **index the fix**: chunk + embed approved text into `chunks` with `source_type='field_fix'`, `fix_id`; write audit event with before/after (FR-18).
   - `reject(fix_id, curator, reason)` / `flag_unsafe(...)` — state + audit + reason stored for submitter visibility.
   - `retire(fix_id, actor, reason)` — state + **delete its chunks rows in the same transaction** (index is the single source of truth, spec §2.4).
   - **The moat test:** approve fix → Phase 4 search for its symptom returns the field_fix chunk ranked above manual content (boost working) → retire → same search no longer returns it.
-- [ ] **8.5 Routers:** `GET /curation/queue`, `POST /fixes/{id}/approve|reject|unsafe|retire`. Role guard tests (tech → 403).
-- [ ] **8.6 Commit.** Standalone: `pytest tests/curation -v`.
+- [x] **8.5 Routers:** `GET /curation/queue`, `POST /fixes/{id}/approve|reject|unsafe|retire`. Role guard tests (tech → 403).
+- [x] **8.6 Commit.** Standalone: `pytest tests/curation -v`.
 
 ---
 

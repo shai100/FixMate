@@ -1,7 +1,7 @@
 # FixMate — Setup From Scratch
 
 How to bring a FixMate development environment up on a fresh machine. Reflects the
-repository state through Phase 7 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service, HTTP API, feedback + candidate-fix submission). Keep this file in sync
+repository state through Phase 8 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service, HTTP API, feedback + candidate-fix submission, curation workflow). Keep this file in sync
 with the codebase — see [Keeping this document current](#keeping-this-document-current).
 
 ---
@@ -146,6 +146,7 @@ pytest tests/retrieval -v
 pytest tests/answers -v
 pytest tests/api -v
 pytest tests/feedback -v
+pytest tests/curation -v
 ```
 
 The `tests/answers` suite covers the answer service (Phase 5): pure-unit groundedness
@@ -235,6 +236,18 @@ A positive signal reinforces the cited chunks (`chunks.positive_signals`); a neg
 audit event — it is never indexed, so it cannot be served until a curator approves it. The
 `tests/feedback` suite covers it; most cases are pure DB (fast), with one `@pytest.mark.integration`
 case proving a submitted fix never surfaces in retrieval.
+
+The curation workflow (Phase 8 — the approved-fix moat) is curator/admin-only:
+`GET /curation/queue` returns each pending fix with its question, original answer, proposed
+text, top manual chunks, and an AI safety pre-screen advisory (generated lazily on first view,
+persisted to `fixes.ai_prescreen_report`). `POST /fixes/{id}/approve|reject|unsafe|retire` drive
+the fix lifecycle through a guarded state machine (`fixmate/curation/states.py`). Approve chunks +
+embeds the fix text into `chunks` as `source_type=field_fix` so it becomes retrievable and outranks
+manual content on symptom match; retire deletes those chunks in the same transaction (the index is
+the single source of truth). Every transition writes an `audit_events` row. Technicians get 403.
+The `tests/curation` suite covers it — pure-unit state-machine tests plus `@pytest.mark.integration`
+service/API tests (pre-screen + approve embed against live Ollama; keep `docker compose up -d`
+running), including the moat test (approve → field fix ranks first; retire → it disappears).
 
 ### Async ingestion via Celery (optional)
 

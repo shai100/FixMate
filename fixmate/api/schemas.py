@@ -77,6 +77,34 @@ class EquipmentOut(BaseModel):
     created_at: datetime
 
 
+class ManualChunkOut(BaseModel):
+    chunk_id: str
+    page: int | None
+    text: str
+    score: float
+
+
+class ReviewItemOut(BaseModel):
+    fix_id: uuid.UUID
+    state: str
+    question: str | None
+    original_answer: str | None
+    proposed_text: str
+    submitted_by: uuid.UUID
+    equipment_id: uuid.UUID
+    manual_chunks: list[ManualChunkOut]
+    prescreen: dict | None
+    created_at: datetime
+
+
+class ApproveRequest(BaseModel):
+    edited_text: str | None = None
+
+
+class ResolveRequest(BaseModel):
+    reason: str
+
+
 class UploadAccepted(BaseModel):
     task_id: str
     status: str
