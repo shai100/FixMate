@@ -2,5 +2,10 @@
   "enabledPlugins": {
     "claude-api@anthropic-agent-skills": true,
     "frontend-design@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git merge *)"
+    ]
   }
 }
