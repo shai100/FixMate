@@ -7,3 +7,6 @@ __pycache__/
 .ruff_cache/
 dist/
 *.egg-info/
+web/dev-dist/
+web/*.tsbuildinfo
+web/dev.*.log

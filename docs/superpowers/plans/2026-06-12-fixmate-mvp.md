@@ -33,7 +33,7 @@
 | 7 | Feedback + candidate-fix submission | `pytest tests/feedback -v` | ☑ |
 | 8 | Curation workflow + pre-screen + audit + index sync | `pytest tests/curation -v` | ☑ |
 | 9 | Keycloak OIDC (replace dev auth) | `pytest tests/auth -v` (live Keycloak) | ☑ |
-| 10 | Technician PWA (chat) | `npm run dev` in `web/` | ☐ |
+| 10 | Technician PWA (chat) | `npm run dev` in `web/` | ☑ |
 | 11 | Curator/Admin console views | `npm run dev`, role=curator | ☐ |
 | 12 | Safety + answer-regression eval harness, demo seed | `python -m fixmate.evals.run` | ☐ |
 
@@ -533,9 +533,9 @@ Run → PASS → commit.
 
 **Files:** Create `web/` (Vite + React + TS). Components: `EquipmentPicker`, `ChatView`, `AnswerCard` (safety warnings styled first; confidence chip; numbered steps; inline figures; citation links opening source page; **distinct field-fix verification badge** — spec pitfall table), `EscalationCard` (low-confidence path), `FeedbackBar` ("Did it help?" → No opens fix-submission form with photo attach). PWA: `vite-plugin-pwa` service-worker shell caching. Accessibility: WCAG 2.1 AA, ≥48px touch targets (gloves).
 
-- [ ] **10.1** Scaffold + typed API client (`web/src/api.ts`) matching Phase 6/7 payloads; dev proxy to `:8000`; dev-auth headers injected from `localStorage` (replaced by Keycloak JS adapter when Phase 9 lands).
-- [ ] **10.2** Build components against the live local API (vitest component tests for AnswerCard rendering: warnings-first ordering, badge shown only when `source_type=field_fix` citation present).
-- [ ] **10.3 Run it standalone:** `cd web; npm install; npm run dev` → ask a question end-to-end against local Ollama. Commit per component.
+- [x] **10.1** Scaffold + typed API client (`web/src/api.ts`) matching Phase 6/7 payloads; dev proxy to `:8000`; dev-auth headers injected from `localStorage` (replaced by Keycloak JS adapter when Phase 9 lands).
+- [x] **10.2** Build components against the live local API (vitest component tests for AnswerCard rendering: warnings-first ordering, badge shown only when `source_type=field_fix` citation present).
+- [x] **10.3 Run it standalone:** `cd web; npm install; npm run dev` → ask a question end-to-end against local Ollama. Commit per component.
 
 ---
 

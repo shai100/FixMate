@@ -1,0 +1,246 @@
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --warning-bg: #7f1d1d;
+  --warning-text: #fee2e2;
+  --fieldfix: #16a34a;
+  --high: #16a34a;
+  --medium: #d97706;
+  --low: #dc2626;
+  /* Glove-friendly touch target (plan §10 / WCAG 2.1 AA 2.5.5). */
+  --touch: 48px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  min-height: var(--touch);
+  border-radius: 8px;
+}
+
+button {
+  min-width: var(--touch);
+  padding: 0 1rem;
+  background: var(--accent);
+  color: #04263a;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid #334155;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Chat */
+.chat-view__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.chat-view__equipment {
+  color: var(--muted);
+}
+.chat-view__transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 1rem 0;
+}
+.chat-turn__question {
+  font-weight: 600;
+}
+.chat-view__composer {
+  display: flex;
+  gap: 0.5rem;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding: 0.5rem 0;
+}
+
+/* Answer card */
+.answer-card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 1rem;
+}
+.answer-card__meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Safety warnings — rendered first and visually dominant. */
+.safety-warnings {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.safety-warnings__heading {
+  margin: 0 0 0.25rem;
+}
+
+.confidence-chip {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #04263a;
+}
+.confidence-chip--high {
+  background: var(--high);
+  color: #fff;
+}
+.confidence-chip--medium {
+  background: var(--medium);
+  color: #fff;
+}
+.confidence-chip--low {
+  background: var(--low);
+  color: #fff;
+}
+
+/* Distinct field-fix badge (spec pitfall: never blur approved vs unapproved). */
+.fieldfix-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: var(--fieldfix);
+  color: #fff;
+}
+
+.answer-card__figures img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+.answer-card__citations h4 {
+  margin-bottom: 0.25rem;
+}
+.citation {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.citation-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+.citation-badge--manual {
+  background: #334155;
+  color: var(--text);
+}
+.citation-badge--field_fix {
+  background: var(--fieldfix);
+  color: #fff;
+}
+
+/* Escalation */
+.escalation-card {
+  background: var(--surface);
+  border: 2px solid var(--low);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+/* Feedback */
+.feedback-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+.feedback-bar--done {
+  color: var(--muted);
+}
+.feedback-bar__error,
+.chat-view__error,
+.equipment-picker__error {
+  color: #fca5a5;
+}
+
+.fix-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+.fix-form__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.equipment-picker ul,
+.answer-card__citations ul,
+.escalation-card ul {
+  list-style: none;
+  padding: 0;
+}
+.equipment-picker li {
+  margin-bottom: 0.5rem;
+}
+.equipment-picker button {
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.dev-login {
+  max-width: 420px;
+  margin: 3rem auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+}

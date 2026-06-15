@@ -15,6 +15,7 @@ Install these before starting:
 | **Python** | ≥ 3.12 | Matches `requires-python` in `pyproject.toml`. |
 | **Docker + Docker Compose** | recent | Runs Postgres, Redis, MinIO, Ollama. |
 | **Git** | any | To clone the repo. |
+| **Node.js** | ≥ 20 LTS | Builds and runs the technician PWA in `web/` (Phase 10). Windows: `winget install OpenJS.NodeJS.LTS`. |
 | **NVIDIA GPU + driver** (optional) | — | For local Ollama acceleration (spec §8.3). Without a GPU, Ollama runs on CPU (slower) or run Ollama natively on Windows — see note in `docker-compose.yml`. |
 
 The local stack targets the spec §8 "full local-PC profile". A 4 GB GPU is enough for the
@@ -306,6 +307,30 @@ python -m fixmate.ingestion.cli tests/fixtures/sample-manual.pdf --org demo --eq
 
 The CLI prints the task id; the worker logs the resulting document id. Redis (already in
 the Compose stack) is the broker and result backend.
+
+---
+
+### Technician PWA (Phase 10)
+
+The React + Vite + TypeScript technician chat client lives in `web/`. It talks to the
+FastAPI app (section 7) via a dev proxy.
+
+```bash
+cd web
+npm install
+npm run test         # vitest component tests (AnswerCard, EscalationCard)
+npm run build        # tsc strict + production build + PWA service worker
+npm run dev          # dev server (proxies API calls to localhost:8000)
+```
+
+`npm run dev` prints the local URL (default `http://localhost:5173`). If that port is
+blocked on Windows (`EACCES ::1:5173`, a reserved range), run
+`npm run dev -- --host 127.0.0.1 --port 8123`.
+
+With `DEV_AUTH=true` the app prompts for an org/user UUID and role on first load — paste
+the IDs printed by `scripts/seed_demo.py` (Phase 12) to chat end-to-end against local
+Ollama. When Phase 9's Keycloak client adapter lands, this dev-login is replaced by an
+OIDC redirect.
 
 ---
 
