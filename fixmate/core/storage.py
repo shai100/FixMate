@@ -38,3 +38,13 @@ def object_exists(key: str) -> bool:
         return True
     except ClientError:
         return False
+
+
+def presigned_url(key: str, expires_in: int = 3600) -> str:
+    # Objects are tenant-prefixed and the bucket is private; a short-lived signed
+    # URL lets the client fetch a figure without exposing the bucket publicly.
+    return _client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.s3_bucket, "Key": key},
+        ExpiresIn=expires_in,
+    )

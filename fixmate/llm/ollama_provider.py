@@ -28,7 +28,9 @@ class OllamaProvider:
         }
         if request.json_response:
             payload["format"] = "json"
-        async with httpx.AsyncClient(timeout=120) as client:
+        # CPU-served qwen3:4b (spec §8.3 local profile) can take several minutes
+        # to generate a full structured answer; keep a generous read timeout.
+        async with httpx.AsyncClient(timeout=600) as client:
             resp = await client.post(f"{self._base_url}/api/chat", json=payload)
             resp.raise_for_status()
             data = resp.json()
