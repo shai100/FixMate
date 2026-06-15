@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     # Deployment environment. The API refuses to boot when dev_auth is true here
     # outside "local" (header auth must never reach a real deployment — Phase 6.1).
     env: str = "local"
+    # Keycloak OIDC (Phase 9). Used only when dev_auth is false: Bearer tokens are
+    # validated against the realm's JWKS. issuer/jwks_uri are derived from these.
+    keycloak_base_url: str = "http://localhost:8080"
+    keycloak_realm: str = "fixmate"
+    oidc_client_id: str = "fixmate-api"
+    # Keycloak access tokens carry aud=account by default, not the client id, so
+    # audience verification is off unless an explicit aud mapper is configured.
+    oidc_verify_audience: bool = False
 
 
 settings = Settings()

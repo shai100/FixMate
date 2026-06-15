@@ -1,7 +1,7 @@
 # FixMate — Setup From Scratch
 
 How to bring a FixMate development environment up on a fresh machine. Reflects the
-repository state through Phase 8 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service, HTTP API, feedback + candidate-fix submission, curation workflow). Keep this file in sync
+repository state through Phase 9 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service, HTTP API, feedback + candidate-fix submission, curation workflow, Keycloak OIDC auth). Keep this file in sync
 with the codebase — see [Keeping this document current](#keeping-this-document-current).
 
 ---
@@ -61,8 +61,12 @@ required for a default local run. Key knobs (see `.env.example` / `fixmate/core/
 | `OLLAMA_GENERATION_MODEL` | `qwen3:4b` | Local generation model. |
 | `OLLAMA_EMBEDDING_MODEL` | `bge-m3` | Local embedding model (1024-dim — matches `chunks.embedding`). |
 | `ANTHROPIC_API_KEY` | _(empty)_ | Required only when `LLM_PROVIDER=anthropic`. Never commit. |
-| `DEV_AUTH` | `true` | Phase 6 header auth. **Must be `false` outside local.** |
+| `DEV_AUTH` | `true` | Phase 6 header auth. **Must be `false` outside local** — when false the API validates Keycloak Bearer tokens (Phase 9). |
 | `ENV` | `local` | Deployment environment. The API refuses to boot when `DEV_AUTH=true` and `ENV` is not `local`. |
+| `KEYCLOAK_BASE_URL` | `http://localhost:8080` | Keycloak issuer base (Phase 9; used only when `DEV_AUTH=false`). |
+| `KEYCLOAK_REALM` | `fixmate` | Realm whose JWKS validates Bearer tokens. |
+| `OIDC_CLIENT_ID` | `fixmate-api` | Public client used for the password grant. |
+| `OIDC_VERIFY_AUDIENCE` | `false` | Keycloak access tokens carry `aud=account` by default; enable only with an explicit aud mapper. |
 
 ---
 
@@ -147,6 +151,7 @@ pytest tests/answers -v
 pytest tests/api -v
 pytest tests/feedback -v
 pytest tests/curation -v
+pytest tests/auth -v
 ```
 
 The `tests/answers` suite covers the answer service (Phase 5): pure-unit groundedness
@@ -248,6 +253,41 @@ the single source of truth). Every transition writes an `audit_events` row. Tech
 The `tests/curation` suite covers it — pure-unit state-machine tests plus `@pytest.mark.integration`
 service/API tests (pre-screen + approve embed against live Ollama; keep `docker compose up -d`
 running), including the moat test (approve → field fix ranks first; retire → it disappears).
+
+### Keycloak OIDC authentication (Phase 9)
+
+For local MVP work, header-based dev auth (`DEV_AUTH=true`) is the default and Keycloak is
+**not** required. To exercise real OIDC (the production auth path), start Keycloak via the
+`auth` compose profile and bootstrap the realm:
+
+```bash
+docker compose --profile auth up -d keycloak   # serves on http://localhost:8080
+python scripts/keycloak_bootstrap.py
+```
+
+The bootstrap script is idempotent. It creates the `fixmate` realm, a public `fixmate-api`
+client with direct-access (password) grants, the realm roles `tech`/`curator`/`admin`, an
+`organization_id` user-attribute → access-token claim mapper (it also enables the realm's
+unmanaged-attribute policy, required by Keycloak 26), and three test users:
+`tech@example.com` / `curator@example.com` / `admin@example.com` (password = role name),
+all in demo org `00000000-0000-0000-0000-0000000000d0`.
+
+With `DEV_AUTH=false`, the API stops reading `X-Org-Id`/`X-User-Id`/`X-Role` headers and
+instead validates an `Authorization: Bearer <token>` JWT against the realm's JWKS, mapping
+the verified claims to the same `AuthContext` the handlers already use. Fetch a token and
+call the API:
+
+```bash
+TOKEN=$(curl -s -X POST localhost:8080/realms/fixmate/protocol/openid-connect/token \
+  -d grant_type=password -d client_id=fixmate-api \
+  -d username=tech@example.com -d password=tech | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+curl -s -X POST localhost:8000/conversations -H "Authorization: Bearer $TOKEN" -d '{}'
+```
+
+The `tests/auth` suite covers this layer: pure-unit JWT validation tests (valid/expired/
+garbage/wrong-key/wrong-issuer/missing-claim, no Keycloak needed) plus one
+`@pytest.mark.integration` case running a real password-grant flow against live Keycloak —
+run the two commands above first, then `pytest tests/auth -v`.
 
 ### Async ingestion via Celery (optional)
 

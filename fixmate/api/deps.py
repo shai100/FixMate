@@ -26,10 +26,10 @@ async def get_current_user(
     x_org_id: str | None = Header(default=None),
     x_user_id: str | None = Header(default=None),
     x_role: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
 ) -> AuthContext:
     if not settings.dev_auth:
-        # Phase 9 wires the Keycloak OIDC validator in here.
-        raise HTTPException(status_code=501, detail="OIDC auth not yet implemented (Phase 9)")
+        return _oidc_auth(authorization)
     if not (x_org_id and x_user_id and x_role):
         raise HTTPException(status_code=401, detail="Missing X-Org-Id / X-User-Id / X-Role headers")
     try:
@@ -40,6 +40,21 @@ async def get_current_user(
     if x_role not in ROLES:
         raise HTTPException(status_code=401, detail=f"X-Role must be one of {ROLES}")
     return AuthContext(org_id=org_id, user_id=user_id, role=x_role)
+
+
+def _oidc_auth(authorization: str | None) -> AuthContext:
+    # Imported lazily: auth_oidc imports AuthContext/ROLES from this module.
+    import jwt
+
+    from fixmate.api.auth_oidc import get_validator
+
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing Bearer token")
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        return get_validator().validate(token)
+    except jwt.InvalidTokenError as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {exc}") from exc
 
 
 def require_role(*allowed: str):
