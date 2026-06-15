@@ -32,7 +32,7 @@
 | 6 | HTTP API + dev auth + conversations | `uvicorn fixmate.api.main:app` + `pytest tests/api -v` | ☑ |
 | 7 | Feedback + candidate-fix submission | `pytest tests/feedback -v` | ☑ |
 | 8 | Curation workflow + pre-screen + audit + index sync | `pytest tests/curation -v` | ☑ |
-| 9 | Keycloak OIDC (replace dev auth) | `pytest tests/auth -v` (live Keycloak) | ☐ |
+| 9 | Keycloak OIDC (replace dev auth) | `pytest tests/auth -v` (live Keycloak) | ☑ |
 | 10 | Technician PWA (chat) | `npm run dev` in `web/` | ☐ |
 | 11 | Curator/Admin console views | `npm run dev`, role=curator | ☐ |
 | 12 | Safety + answer-regression eval harness, demo seed | `python -m fixmate.evals.run` | ☐ |
@@ -523,9 +523,9 @@ Run → PASS → commit.
 
 **Files:** Create `fixmate/api/auth_oidc.py`, `scripts/keycloak_bootstrap.py` (create realm `fixmate`, client, roles tech/curator/admin, org-id user attribute → token claim), `tests/auth/test_oidc.py`.
 
-- [ ] **9.1** `docker compose --profile auth up -d`; bootstrap script creates realm + test users.
-- [ ] **9.2 TDD:** `auth_oidc.py` validates Bearer JWT against Keycloak JWKS (cache keys), maps claims → `AuthContext` (same dataclass as Phase 6 — handlers don't change). Tests: valid token passes, expired/garbage rejected (401), missing org claim rejected, role claim maps correctly.
-- [ ] **9.3** `deps.py` switches on `DEV_AUTH`; integration test runs one real password-grant flow against local Keycloak. Commit.
+- [x] **9.1** `docker compose --profile auth up -d`; bootstrap script creates realm + test users.
+- [x] **9.2 TDD:** `auth_oidc.py` validates Bearer JWT against Keycloak JWKS (cache keys), maps claims → `AuthContext` (same dataclass as Phase 6 — handlers don't change). Tests: valid token passes, expired/garbage rejected (401), missing org claim rejected, role claim maps correctly.
+- [x] **9.3** `deps.py` switches on `DEV_AUTH`; integration test runs one real password-grant flow against local Keycloak. Commit.
 
 ---
 
