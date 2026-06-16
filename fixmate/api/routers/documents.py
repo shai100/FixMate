@@ -3,9 +3,12 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy import select
 
 from fixmate.api.deps import AuthContext, get_current_user
-from fixmate.api.schemas import DocumentStatus, UploadAccepted
+from fixmate.api.schemas import DocumentOut, DocumentStatus, UploadAccepted
+from fixmate.core.db import session_for_org
+from fixmate.core.models import Document
 from fixmate.ingestion.tasks import ingest_document_task
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -47,6 +50,31 @@ async def upload_document(
         str(auth.org_id), str(eq_id), str(dest), title or Path(name).name
     )
     return UploadAccepted(task_id=task.id, status="queued")
+
+
+@router.get("", response_model=list[DocumentOut])
+async def list_documents(
+    auth: AuthContext = Depends(get_current_user),
+) -> list[DocumentOut]:
+    # Version list for the admin console (FR-9): newest first so the live
+    # revision (superseded_by is null) surfaces above its superseded ancestors.
+    async with session_for_org(auth.org_id) as s:
+        rows = (
+            (await s.execute(select(Document).order_by(Document.created_at.desc())))
+            .scalars()
+            .all()
+        )
+        return [
+            DocumentOut(
+                id=d.id,
+                equipment_id=d.equipment_id,
+                title=d.title,
+                version=d.version,
+                superseded_by=d.superseded_by,
+                created_at=d.created_at,
+            )
+            for d in rows
+        ]
 
 
 @router.get("/{task_id}", response_model=DocumentStatus)

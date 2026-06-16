@@ -114,3 +114,24 @@ class DocumentStatus(BaseModel):
     task_id: str
     status: str
     document_id: uuid.UUID | None = None
+
+
+class DocumentOut(BaseModel):
+    id: uuid.UUID
+    equipment_id: uuid.UUID
+    title: str
+    version: int
+    superseded_by: uuid.UUID | None
+    created_at: datetime
+
+
+class UserOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    email: str | None
+    role: str
+    created_at: datetime
+
+
+class SetRoleRequest(BaseModel):
+    role: str

@@ -34,7 +34,7 @@
 | 8 | Curation workflow + pre-screen + audit + index sync | `pytest tests/curation -v` | ☑ |
 | 9 | Keycloak OIDC (replace dev auth) | `pytest tests/auth -v` (live Keycloak) | ☑ |
 | 10 | Technician PWA (chat) | `npm run dev` in `web/` | ☑ |
-| 11 | Curator/Admin console views | `npm run dev`, role=curator | ☐ |
+| 11 | Curator/Admin console views | `npm run dev`, role=curator | ☑* |
 | 12 | Safety + answer-regression eval harness, demo seed | `python -m fixmate.evals.run` | ☐ |
 
 Dependency graph: 0 → 1 → {2, 3*} ; 3 needs 1+2 (captioning/embeddings); 4 needs 3; 5 needs 4; 6 needs 5; 7 needs 6; 8 needs 7; 9 needs 6; 10 needs 6; 11 needs 8; 12 needs 5 (grows with 8).
@@ -543,7 +543,7 @@ Run → PASS → commit.
 
 **Files:** Add routes in `web/`: `ReviewQueue` (badge count, FR-14), `ReviewDetail` (side-by-side: question / answer given / proposed fix / manual excerpts / pre-screen advisory; Approve / Edit & Approve / Reject / Flag Unsafe actions — FR-15/16), `DocumentsAdmin` (upload + ingestion status + version list), `EquipmentAdmin`, `UsersAdmin` (role assignment). Route guard by role.
 
-- [ ] **11.1–11.4** TDD per view against live API; verify approve-in-UI → fix appears in technician answers; reject → submitter sees reason. Commit per view.
+- [x] **11.1–11.4** TDD per view against live API; verify approve-in-UI → fix appears in technician answers; reject → submitter sees reason. Commit per view. *(Implemented: `Console` role-guard shell, `ReviewQueue`, `ReviewDetail`, `DocumentsAdmin`, `EquipmentAdmin`, `UsersAdmin` + vitest tests; backend `GET /documents`, `GET /admin/users`, `POST /admin/users/{id}/role`. Backend tests pass; frontend vitest/tsc not run on this machine — no npm installed. See `docs/phase-11-curator-admin-console.md`.)*
 
 ---
 

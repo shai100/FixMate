@@ -57,3 +57,56 @@ export interface FeedbackResult {
   helped: boolean;
   fix_id: string | null;
 }
+
+// --- Curator / Admin console (Phase 11) ---
+
+export interface ManualChunk {
+  chunk_id: string;
+  page: number | null;
+  text: string;
+  score: number;
+}
+
+// AI pre-screen advisory (FR-15). It informs the human; it never decides.
+export interface Prescreen {
+  hazard_flags?: string[];
+  contradictions?: string[];
+  missing_safety_steps?: string[];
+  overall_risk?: "low" | "medium" | "high";
+  error?: string;
+}
+
+export interface ReviewItem {
+  fix_id: string;
+  state: string;
+  question: string | null;
+  original_answer: string | null;
+  proposed_text: string;
+  submitted_by: string;
+  equipment_id: string;
+  manual_chunks: ManualChunk[];
+  prescreen: Prescreen | null;
+  created_at: string;
+}
+
+export interface DocumentRow {
+  id: string;
+  equipment_id: string;
+  title: string;
+  version: number;
+  superseded_by: string | null;
+  created_at: string;
+}
+
+export interface UserRow {
+  id: string;
+  name: string;
+  email: string | null;
+  role: "tech" | "curator" | "admin";
+  created_at: string;
+}
+
+export interface UploadAccepted {
+  task_id: string;
+  status: string;
+}

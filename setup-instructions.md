@@ -310,15 +310,16 @@ the Compose stack) is the broker and result backend.
 
 ---
 
-### Technician PWA (Phase 10)
+### Technician PWA + Curator/Admin console (Phases 10–11)
 
-The React + Vite + TypeScript technician chat client lives in `web/`. It talks to the
-FastAPI app (section 7) via a dev proxy.
+The React + Vite + TypeScript client lives in `web/`. It talks to the FastAPI app
+(section 7) via a dev proxy.
 
 ```bash
 cd web
 npm install
-npm run test         # vitest component tests (AnswerCard, EscalationCard)
+npm run test         # vitest component tests (AnswerCard, EscalationCard, ReviewQueue,
+                     #   ReviewDetail, Console role-guard, UsersAdmin)
 npm run build        # tsc strict + production build + PWA service worker
 npm run dev          # dev server (proxies API calls to localhost:8000)
 ```
@@ -331,6 +332,14 @@ With `DEV_AUTH=true` the app prompts for an org/user UUID and role on first load
 the IDs printed by `scripts/seed_demo.py` (Phase 12) to chat end-to-end against local
 Ollama. When Phase 9's Keycloak client adapter lands, this dev-login is replaced by an
 OIDC redirect.
+
+**Role-based routing (Phase 11):** the role you pick at login decides what you see.
+`tech` lands in the chat flow (Phase 10). `curator` and `admin` land in the
+**console**: the review queue (approve / edit & approve / reject / flag unsafe — the
+curation moat), documents (upload + ingestion status + version history), and equipment.
+The **Users** tab (role assignment) is admin-only. The console consumes the
+`/curation/queue`, `/fixes/{id}/*`, `/documents`, `/equipment`, and `/admin/users`
+endpoints, all proxied to `localhost:8000` in dev.
 
 ---
 
