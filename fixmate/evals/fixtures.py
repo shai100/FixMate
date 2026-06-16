@@ -51,6 +51,7 @@ DEMO_FIX_TEXT = (
 class DemoTenant:
     org_id: uuid.UUID
     equipment_id: uuid.UUID
+    admin_id: uuid.UUID
     curator_id: uuid.UUID
     tech_id: uuid.UUID
     document_id: uuid.UUID | None
@@ -94,6 +95,7 @@ async def build_demo_tenant(org_name: str, *, provider: LLMProvider | None = Non
 
     async with session_for_org(org_id) as s:
         equipment_id = await registry.get_or_create_equipment(s, org_id, DEMO_EQUIPMENT)
+        admin_id = await _get_or_create_user(s, org_id, "Auto Admin", "admin")
         curator_id = await _get_or_create_user(s, org_id, "Cora Curator", "curator")
         tech_id = await _get_or_create_user(s, org_id, "Tina Tech", "tech")
         existing_doc = await registry.latest_document(s, org_id, equipment_id, DEMO_MANUAL_TITLE)
@@ -133,6 +135,7 @@ async def build_demo_tenant(org_name: str, *, provider: LLMProvider | None = Non
     return DemoTenant(
         org_id=org_id,
         equipment_id=equipment_id,
+        admin_id=admin_id,
         curator_id=curator_id,
         tech_id=tech_id,
         document_id=document_id,

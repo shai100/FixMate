@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { setIdentity, type DevIdentity } from "../auth";
+import { api } from "../api";
 import { Icon } from "./Icon";
 
 // Dev-only identity entry (Phase 6 dev auth). Replaced by the Keycloak login
@@ -11,6 +12,37 @@ export function DevLogin({ onLogin }: { onLogin: (id: DevIdentity) => void }) {
   const [userId, setUserId] = useState("");
   const [role, setRole] = useState<DevIdentity["role"]>("tech");
   const [busy, setBusy] = useState(false);
+  // When DEV_AUTO_LOGIN is on the backend, drop straight into the demo tenant as
+  // admin — no UUID paste. A 404 (feature off / not seeded) just shows the form.
+  const [autoTrying, setAutoTrying] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .devAutoLogin()
+      .then((id) => {
+        if (!active) return;
+        const identity: DevIdentity = { orgId: id.org_id, userId: id.user_id, role: id.role };
+        setIdentity(identity);
+        onLogin(identity);
+      })
+      .catch(() => {
+        if (active) setAutoTrying(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [onLogin]);
+
+  if (autoTrying) {
+    return (
+      <div className="screen signin">
+        <div className="signin__inner" style={{ alignItems: "center" }}>
+          <span className="spin" />
+        </div>
+      </div>
+    );
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();

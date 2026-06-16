@@ -5,6 +5,7 @@ from fixmate.api.routers import (
     ask,
     conversations,
     curation,
+    dev,
     documents,
     equipment,
     feedback,
@@ -33,6 +34,7 @@ app.include_router(feedback.router)
 app.include_router(curation.queue_router)
 app.include_router(curation.fixes_router)
 app.include_router(admin.router)
+app.include_router(dev.router)
 
 
 @app.get("/health", tags=["meta"])

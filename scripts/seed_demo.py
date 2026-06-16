@@ -35,6 +35,7 @@ async def _run() -> None:
     print("\nDemo tenant ready:")
     print(f"  organization_id : {tenant.org_id}")
     print(f"  equipment_id    : {tenant.equipment_id}  (Pump X)")
+    print(f"  admin_id        : {tenant.admin_id}")
     print(f"  curator_id      : {tenant.curator_id}")
     print(f"  tech_id         : {tenant.tech_id}")
     print(f"  document_id     : {tenant.document_id}")

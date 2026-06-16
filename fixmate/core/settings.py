@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
     dev_auth: bool = True
+    # Dev convenience (local only): when true alongside dev_auth, the web client
+    # auto-signs-in as an admin of the demo tenant via /dev/auto-login, skipping
+    # the manual org/user UUID entry. Never honoured unless dev_auth is also true.
+    dev_auto_login: bool = False
+    # Org name the dev auto-login resolves to (matches scripts/seed_demo.py).
+    dev_demo_org: str = "FixMate Demo"
     # Deployment environment. The API refuses to boot when dev_auth is true here
     # outside "local" (header auth must never reach a real deployment — Phase 6.1).
     env: str = "local"

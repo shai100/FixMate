@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import delete, func, select
 
 from fixmate.core.db import session_for_org
-from fixmate.core.models import AnswerLog, AuditEvent, Chunk, Fix
+from fixmate.core.models import AnswerLog, AuditEvent, Chunk, Fix, User
 from fixmate.curation.prescreen import prescreen
 from fixmate.curation.states import can_transition
 from fixmate.ingestion.chunking import chunk_pages
@@ -26,6 +26,23 @@ class IllegalTransition(Exception):
 
 class NotAuthorized(Exception):
     """The actor's role may not perform this curation action (FR-14)."""
+
+
+@dataclass
+class FixSummary:
+    fix_id: uuid.UUID
+    state: str
+    question: str | None
+    proposed_text: str
+    equipment_id: uuid.UUID
+    submitted_by: uuid.UUID
+    submitted_by_name: str | None
+    reviewed_by: uuid.UUID | None
+    reviewed_by_name: str | None
+    review_notes: str | None
+    approved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
 
 
 @dataclass
@@ -131,6 +148,194 @@ async def review_queue(
         return items
 
 
+async def _index_fix_text(s, org_id: uuid.UUID, fix: Fix, text: str) -> None:
+    """Embed `text` into field_fix chunks for `fix` (spec §2.4 approved-fix moat).
+
+    The index is the single source of truth: callers that change an approved
+    fix's served text must delete its existing chunks first, then re-index here.
+    """
+    text_chunks = chunk_pages([(0, text)])
+    embeddings = await embed([c.text for c in text_chunks])
+    for tc, vector in zip(text_chunks, embeddings):
+        s.add(
+            Chunk(
+                organization_id=org_id,
+                document_id=None,
+                source_type="field_fix",
+                content=tc.text,
+                page=None,
+                fix_id=fix.id,
+                embedding=vector,
+            )
+        )
+
+
+async def list_fixes(
+    org_id: uuid.UUID, states: tuple[str, ...] | None = None
+) -> list[FixSummary]:
+    """All fixes (optionally filtered by state) with submitter/reviewer names.
+
+    Powers the console's "all items" table (date, creator, approved). Unlike
+    review_queue this never triggers a pre-screen — it is a read-only listing.
+    """
+    org_id = uuid.UUID(str(org_id))
+    async with session_for_org(org_id) as s:
+        stmt = select(Fix).order_by(Fix.created_at.desc())
+        if states:
+            stmt = stmt.where(Fix.state.in_(states))
+        fixes = (await s.execute(stmt)).scalars().all()
+
+        user_ids = {f.submitted_by for f in fixes} | {
+            f.reviewed_by for f in fixes if f.reviewed_by
+        }
+        names: dict[uuid.UUID, str] = {}
+        if user_ids:
+            for u in (
+                (await s.execute(select(User).where(User.id.in_(user_ids)))).scalars().all()
+            ):
+                names[u.id] = u.name
+
+        return [
+            FixSummary(
+                fix_id=f.id,
+                state=f.state,
+                question=f.question_text,
+                proposed_text=f.proposed_text,
+                equipment_id=f.equipment_id,
+                submitted_by=f.submitted_by,
+                submitted_by_name=names.get(f.submitted_by),
+                reviewed_by=f.reviewed_by,
+                reviewed_by_name=names.get(f.reviewed_by) if f.reviewed_by else None,
+                review_notes=f.review_notes,
+                approved_at=f.approved_at,
+                created_at=f.created_at,
+                updated_at=f.updated_at,
+            )
+            for f in fixes
+        ]
+
+
+async def create_fix(
+    org_id: uuid.UUID,
+    equipment_id: uuid.UUID,
+    actor_id: uuid.UUID,
+    role: str,
+    proposed_text: str,
+    question: str | None = None,
+) -> uuid.UUID:
+    """Curator/admin opens a new candidate fix directly into review (FR-15).
+
+    Like a technician submission it lands in pending_review and is never indexed
+    until approved — humans approve, nothing is auto-served (spec §2.5).
+    """
+    _require_reviewer(role)
+    org_id = uuid.UUID(str(org_id))
+    text = proposed_text.strip()
+    if not text:
+        raise ValueError("proposed_text must not be empty")
+    async with session_for_org(org_id) as s:
+        fix = Fix(
+            organization_id=org_id,
+            equipment_id=equipment_id,
+            question_text=question,
+            proposed_text=text,
+            submitted_by=actor_id,
+            state="pending_review",
+        )
+        s.add(fix)
+        await s.flush()
+        s.add(
+            AuditEvent(
+                organization_id=org_id,
+                actor_id=actor_id,
+                entity_type="fix",
+                entity_id=fix.id,
+                action="create",
+                before=None,
+                after={"state": "pending_review", "proposed_text": text},
+            )
+        )
+        await s.commit()
+        return fix.id
+
+
+async def update_fix(
+    org_id: uuid.UUID,
+    fix_id: uuid.UUID,
+    actor_id: uuid.UUID,
+    role: str,
+    proposed_text: str | None = None,
+    question: str | None = None,
+) -> None:
+    """Edit a fix's text/question. If approved, re-index so the moat stays true.
+
+    The vector index is the single source of truth (spec §2.4): editing an
+    approved fix's served text must atomically replace its field_fix chunks.
+    """
+    _require_reviewer(role)
+    org_id = uuid.UUID(str(org_id))
+    new_text = proposed_text.strip() if proposed_text is not None else None
+    if new_text == "":
+        raise ValueError("proposed_text must not be empty")
+    async with session_for_org(org_id) as s:
+        fix = await s.get(Fix, fix_id)
+        if fix is None:
+            raise FixNotFound(str(fix_id))
+        before = {"proposed_text": fix.proposed_text, "question_text": fix.question_text}
+        if new_text is not None:
+            fix.proposed_text = new_text
+        if question is not None:
+            fix.question_text = question
+        fix.updated_at = func.now()
+
+        if new_text is not None and fix.state == "approved":
+            await s.execute(delete(Chunk).where(Chunk.fix_id == fix.id))
+            await s.flush()
+            await _index_fix_text(s, org_id, fix, new_text)
+
+        s.add(
+            AuditEvent(
+                organization_id=org_id,
+                actor_id=actor_id,
+                entity_type="fix",
+                entity_id=fix.id,
+                action="edit",
+                before=before,
+                after={"proposed_text": fix.proposed_text, "question_text": fix.question_text},
+            )
+        )
+        await s.commit()
+
+
+async def delete_fix(
+    org_id: uuid.UUID, fix_id: uuid.UUID, actor_id: uuid.UUID, role: str
+) -> None:
+    """Delete a fix and its index chunks (chunks cascade on fix delete).
+
+    Removing the row removes it from retrieval immediately (single source of
+    truth, spec §2.4). The audit row survives the deletion (24-month retention).
+    """
+    _require_reviewer(role)
+    org_id = uuid.UUID(str(org_id))
+    async with session_for_org(org_id) as s:
+        fix = await s.get(Fix, fix_id)
+        if fix is None:
+            raise FixNotFound(str(fix_id))
+        s.add(
+            AuditEvent(
+                organization_id=org_id,
+                actor_id=actor_id,
+                entity_type="fix",
+                entity_id=fix.id,
+                action="delete",
+                before={"state": fix.state, "proposed_text": fix.proposed_text},
+                after=None,
+            )
+        )
+        await s.delete(fix)
+        await s.commit()
+
+
 async def _load_for_transition(s, fix_id: uuid.UUID, dst: str) -> Fix:
     fix = await s.get(Fix, fix_id)
     if fix is None:
@@ -161,20 +366,7 @@ async def approve(
         before = {"state": fix.state, "proposed_text": fix.proposed_text}
 
         final_text = text or fix.proposed_text
-        text_chunks = chunk_pages([(0, final_text)])
-        embeddings = await embed([c.text for c in text_chunks])
-        for tc, vector in zip(text_chunks, embeddings):
-            s.add(
-                Chunk(
-                    organization_id=org_id,
-                    document_id=None,
-                    source_type="field_fix",
-                    content=tc.text,
-                    page=None,
-                    fix_id=fix.id,
-                    embedding=vector,
-                )
-            )
+        await _index_fix_text(s, org_id, fix, final_text)
 
         fix.proposed_text = final_text
         fix.state = "approved"

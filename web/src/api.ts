@@ -2,9 +2,11 @@ import { authHeaders } from "./auth";
 import type {
   Answer,
   Conversation,
+  DevIdentityResponse,
   DocumentRow,
   Equipment,
   FeedbackResult,
+  FixSummary,
   ReviewItem,
   UploadAccepted,
   UserRow,
@@ -173,6 +175,38 @@ export const api = {
     });
   },
 
+  // --- Fixes admin (curator/admin): list all, create, edit, delete ---
+
+  listFixes(state?: string): Promise<FixSummary[]> {
+    const q = state ? `?state=${encodeURIComponent(state)}` : "";
+    return request<FixSummary[]>(`/curation/fixes${q}`);
+  },
+
+  createFix(body: {
+    equipment_id: string;
+    proposed_text: string;
+    question?: string | null;
+  }): Promise<{ fix_id: string }> {
+    return request<{ fix_id: string }>("/fixes", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  updateFix(
+    fixId: string,
+    body: { proposed_text?: string | null; question?: string | null },
+  ): Promise<void> {
+    return requestVoid(`/fixes/${fixId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+
+  deleteFix(fixId: string): Promise<void> {
+    return requestVoid(`/fixes/${fixId}`, { method: "DELETE" });
+  },
+
   // --- Users admin ---
 
   listUsers(): Promise<UserRow[]> {
@@ -184,6 +218,37 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ role }),
     });
+  },
+
+  createUser(body: {
+    name: string;
+    email?: string | null;
+    role: UserRow["role"];
+  }): Promise<UserRow> {
+    return request<UserRow>("/admin/users", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  updateUser(
+    userId: string,
+    body: { name?: string; email?: string | null; role?: UserRow["role"] },
+  ): Promise<UserRow> {
+    return request<UserRow>(`/admin/users/${userId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+
+  deleteUser(userId: string): Promise<void> {
+    return requestVoid(`/admin/users/${userId}`, { method: "DELETE" });
+  },
+
+  // --- Dev auto-login (local only) ---
+
+  devAutoLogin(): Promise<DevIdentityResponse> {
+    return request<DevIdentityResponse>("/dev/auto-login");
   },
 };
 

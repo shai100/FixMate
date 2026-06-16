@@ -63,6 +63,8 @@ required for a default local run. Key knobs (see `.env.example` / `fixmate/core/
 | `OLLAMA_EMBEDDING_MODEL` | `bge-m3` | Local embedding model (1024-dim — matches `chunks.embedding`). |
 | `ANTHROPIC_API_KEY` | _(empty)_ | Required only when `LLM_PROVIDER=anthropic`. Never commit. |
 | `DEV_AUTH` | `true` | Phase 6 header auth. **Must be `false` outside local** — when false the API validates Keycloak Bearer tokens (Phase 9). |
+| `DEV_AUTO_LOGIN` | `false` | Local-only convenience. When `true` (and `DEV_AUTH=true`) the web client auto-signs-in as a demo-tenant admin via `GET /dev/auto-login`, skipping the manual UUID entry. |
+| `DEV_DEMO_ORG` | `FixMate Demo` | Org name `/dev/auto-login` resolves to (matches `scripts/seed_demo.py`). |
 | `ENV` | `local` | Deployment environment. The API refuses to boot when `DEV_AUTH=true` and `ENV` is not `local`. |
 | `KEYCLOAK_BASE_URL` | `http://localhost:8080` | Keycloak issuer base (Phase 9; used only when `DEV_AUTH=false`). |
 | `KEYCLOAK_REALM` | `fixmate` | Realm whose JWKS validates Bearer tokens. |
@@ -383,13 +385,23 @@ the IDs printed by `scripts/seed_demo.py` (Phase 12) to chat end-to-end against 
 Ollama. When Phase 9's Keycloak client adapter lands, this dev-login is replaced by an
 OIDC redirect.
 
+**Skip the UUID paste:** set `DEV_AUTO_LOGIN=true` (with `DEV_AUTH=true`) and run
+`scripts/seed_demo.py` once. The web client then calls `GET /dev/auto-login` on load and
+drops straight into the demo tenant as an **admin** (auto-provisioned user "Auto Admin"),
+which lands in the console with full access. To sign in as a different role, sign out
+(clears the stored identity) — but auto-login re-triggers on reload, so flip
+`DEV_AUTO_LOGIN=false` to use the manual form.
+
 **Role-based routing (Phase 11):** the role you pick at login decides what you see.
 `tech` lands in the chat flow (Phase 10). `curator` and `admin` land in the
 **console**: the review queue (approve / edit & approve / reject / flag unsafe — the
-curation moat), documents (upload + ingestion status + version history), and equipment.
-The **Users** tab (role assignment) is admin-only. The console consumes the
-`/curation/queue`, `/fixes/{id}/*`, `/documents`, `/equipment`, and `/admin/users`
-endpoints, all proxied to `localhost:8000` in dev.
+curation moat), **All fixes** (every fix across all states with date / creator / approval,
+plus add new issue / edit / delete), documents (upload + ingestion status + version
+history), and equipment. The **Users** tab is admin-only and supports full user
+management — add, edit name/email, set role, delete. The console consumes the
+`/curation/queue`, `/curation/fixes`, `/fixes` (POST/PATCH/DELETE), `/fixes/{id}/*`,
+`/documents`, `/equipment`, and `/admin/users` (GET/POST/PATCH/DELETE) endpoints, all
+proxied to `localhost:8000` in dev.
 
 ---
 

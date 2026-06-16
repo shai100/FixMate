@@ -1,12 +1,13 @@
 import { useState } from "react";
 import type { DevIdentity } from "../auth";
 import { ReviewQueue } from "./ReviewQueue";
+import { FixesAdmin } from "./FixesAdmin";
 import { DocumentsAdmin } from "./DocumentsAdmin";
 import { EquipmentAdmin } from "./EquipmentAdmin";
 import { UsersAdmin } from "./UsersAdmin";
 import { Icon } from "./Icon";
 
-type Tab = "queue" | "documents" | "equipment" | "users";
+type Tab = "queue" | "fixes" | "documents" | "equipment" | "users";
 
 interface TabDef {
   id: Tab;
@@ -16,6 +17,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: "queue", label: "Review queue" },
+  { id: "fixes", label: "All fixes" },
   { id: "documents", label: "Documents" },
   { id: "equipment", label: "Equipment" },
   { id: "users", label: "Users", adminOnly: true },
@@ -66,6 +68,7 @@ export function Console({
 
       <main className="console-body">
         {tab === "queue" && <ReviewQueue />}
+        {tab === "fixes" && <FixesAdmin />}
         {tab === "documents" && <DocumentsAdmin />}
         {tab === "equipment" && <EquipmentAdmin />}
         {tab === "users" && role === "admin" && <UsersAdmin />}

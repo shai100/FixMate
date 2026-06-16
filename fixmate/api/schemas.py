@@ -135,3 +135,48 @@ class UserOut(BaseModel):
 
 class SetRoleRequest(BaseModel):
     role: str
+
+
+class CreateUserRequest(BaseModel):
+    name: str
+    email: str | None = None
+    role: str
+
+
+class UpdateUserRequest(BaseModel):
+    name: str | None = None
+    email: str | None = None
+    role: str | None = None
+
+
+class DevIdentityOut(BaseModel):
+    org_id: uuid.UUID
+    user_id: uuid.UUID
+    role: str
+
+
+class FixSummaryOut(BaseModel):
+    fix_id: uuid.UUID
+    state: str
+    question: str | None
+    proposed_text: str
+    equipment_id: uuid.UUID
+    submitted_by: uuid.UUID
+    submitted_by_name: str | None
+    reviewed_by: uuid.UUID | None
+    reviewed_by_name: str | None
+    review_notes: str | None
+    approved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class CreateFixRequest(BaseModel):
+    equipment_id: uuid.UUID
+    proposed_text: str
+    question: str | None = None
+
+
+class UpdateFixRequest(BaseModel):
+    proposed_text: str | None = None
+    question: str | None = None

@@ -98,12 +98,37 @@ export interface DocumentRow {
   created_at: string;
 }
 
+export type Role = "tech" | "curator" | "admin";
+
 export interface UserRow {
   id: string;
   name: string;
   email: string | null;
-  role: "tech" | "curator" | "admin";
+  role: Role;
   created_at: string;
+}
+
+export interface DevIdentityResponse {
+  org_id: string;
+  user_id: string;
+  role: Role;
+}
+
+// A fix in any lifecycle state, for the console's "all items" table.
+export interface FixSummary {
+  fix_id: string;
+  state: string;
+  question: string | null;
+  proposed_text: string;
+  equipment_id: string;
+  submitted_by: string;
+  submitted_by_name: string | null;
+  reviewed_by: string | null;
+  reviewed_by_name: string | null;
+  review_notes: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UploadAccepted {
