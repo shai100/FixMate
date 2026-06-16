@@ -1,3 +1,13 @@
+"""Manual (PDF) upload, listing, versioning, and deletion.
+
+Uploading is asynchronous: this router validates the PDF, writes it to a temp
+file, and enqueues a Celery ingestion task (``fixmate/ingestion/tasks.py``) that
+does the slow work (text extraction, chunking, embedding, figure captioning).
+Clients poll ``GET /documents/{task_id}`` for progress. The other endpoints
+manage the resulting ``Document`` rows, whose version lineage is immutable
+provenance — only the title can be edited.
+"""
+
 import tempfile
 import uuid
 from pathlib import Path
@@ -27,6 +37,12 @@ async def upload_document(
     title: str | None = Form(default=None),
     auth: AuthContext = Depends(get_current_user),
 ) -> UploadAccepted:
+    """Accept a PDF upload and enqueue it for background ingestion (returns 202).
+
+    Validates that the file is a non-empty PDF and that ``equipment_id`` is a
+    UUID, stages the bytes to a temp file, then kicks off the Celery task and
+    returns its id so the client can poll ``document_status``.
+    """
     # Boundary validation (CLAUDE.md §4.2): reject anything that is not a PDF.
     is_pdf = (file.content_type == "application/pdf") or (file.filename or "").lower().endswith(
         ".pdf"
@@ -58,6 +74,11 @@ async def list_documents(
     equipment_id: str | None = None,
     auth: AuthContext = Depends(get_current_user),
 ) -> list[DocumentOut]:
+    """List manuals (newest first), optionally filtered to one equipment profile.
+
+    Newest-first ordering surfaces the live revision (``superseded_by is null``)
+    above its superseded ancestors in the admin console.
+    """
     # Version list for the admin console (FR-9): newest first so the live
     # revision (superseded_by is null) surfaces above its superseded ancestors.
     # `equipment_id` scopes the list to one profile's attached manuals.
@@ -91,6 +112,7 @@ async def update_document(
     body: UpdateDocument,
     auth: AuthContext = Depends(get_current_user),
 ) -> DocumentOut:
+    """Rename a manual (the only editable field) and record an audit event."""
     # Set details (FR-8): the only mutable field on a document is its title;
     # version lineage and storage key are immutable provenance.
     async with session_for_org(auth.org_id) as s:
@@ -130,6 +152,12 @@ async def delete_document(
     document_id: uuid.UUID,
     auth: AuthContext = Depends(get_current_user),
 ) -> None:
+    """Delete a manual, its indexed chunks/figures, and its stored files (returns 204).
+
+    DB rows cascade-delete inside the transaction (dropping the manual from
+    retrieval immediately); object-storage cleanup runs *after* the commit and is
+    best-effort so a storage hiccup can't leave a half-deleted index.
+    """
     # Remove a manual and everything indexed from it. Chunks and figures cascade
     # on the document FK (ondelete=CASCADE), so deleting the row drops it from
     # retrieval immediately — the index is the single source of truth (spec §2.4).
@@ -171,6 +199,11 @@ async def document_status(
     task_id: str,
     auth: AuthContext = Depends(get_current_user),
 ) -> DocumentStatus:
+    """Report ingestion progress for an upload task.
+
+    Reads the Celery task state; on success returns the new document id, otherwise
+    the lowercased task state ("pending", "failure", ...).
+    """
     # Ingestion status (FR-8) is read from the Celery result: the task returns
     # the new document id on success. PENDING covers both "queued" and "unknown
     # id" — acceptable for the MVP handoff.

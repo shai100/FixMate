@@ -1,13 +1,20 @@
+/**
+ * The side-by-side fix review view where a curator makes the call (FR-15/16).
+ *
+ * Left: the original question, the answer the technician got, and supporting
+ * manual excerpts. Right: the proposed fix (editable, so a curator can tweak it
+ * before approving — "Edit & Approve"), the AI pre-screen advisory, and a reason
+ * box. Three actions — approve, reject, flag unsafe — call the API and, on
+ * success, notify the parent via `onResolved`. Reject/unsafe require a reason so
+ * the submitter learns why. The pre-screen only advises; the human decides.
+ */
 import { useState } from "react";
 import { api, ApiError } from "../api";
 import type { ReviewItem } from "../types";
 
+/** The three terminal actions a curator can take on a fix. */
 type Action = "approve" | "reject" | "unsafe";
 
-// Side-by-side curation view (FR-15/16): the question, the answer the technician
-// got, the proposed fix (editable for Edit & Approve), the supporting manual
-// excerpts, and the AI pre-screen advisory. The pre-screen advises; the human
-// decides — it never blocks or auto-resolves (CLAUDE.md §2.5).
 export function ReviewDetail({
   item,
   onResolved,
@@ -25,6 +32,8 @@ export function ReviewDetail({
   const edited = editedText.trim() !== item.proposed_text.trim();
   const prescreen = item.prescreen;
 
+  // Perform the chosen action via the API (requiring a reason for reject/unsafe)
+  // and notify the parent on success.
   async function run(action: Action) {
     if (busy) return;
     if ((action === "reject" || action === "unsafe") && !reason.trim()) {
@@ -164,6 +173,7 @@ export function ReviewDetail({
   );
 }
 
+/** Renders one labelled list of pre-screen findings, or nothing if empty. */
 function PrescreenList({ label, values }: { label: string; values?: string[] }) {
   if (!values || values.length === 0) return null;
   return (

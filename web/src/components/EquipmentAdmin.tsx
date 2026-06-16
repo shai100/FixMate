@@ -1,7 +1,17 @@
+/**
+ * The Equipment admin screen — full CRUD for equipment profiles (FR-10).
+ *
+ * Add, edit, and delete equipment, plus manage the manuals attached to each one
+ * (the expandable `EquipmentFiles` panel reuses the document upload/ingestion
+ * pipeline). Deleting a profile cascades server-side to its documents, indexed
+ * chunks, and fixes — hence the strongly-worded confirmation. Exports the screen
+ * plus two private sub-components: `EquipmentRow` and `EquipmentFiles`.
+ */
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api";
 import type { DocumentRow, Equipment } from "../types";
 
+/** Format an ISO timestamp as a short localized date. */
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     year: "numeric",
@@ -10,9 +20,6 @@ function fmtDate(iso: string): string {
   });
 }
 
-// Full equipment management (FR-10): add, edit, view details and delete a
-// profile, plus manage the manuals (files) attached to it. Deleting a profile
-// cascades to its documents, chunks and fixes server-side.
 export function EquipmentAdmin() {
   const [items, setItems] = useState<Equipment[] | null>(null);
   const [name, setName] = useState("");
@@ -86,6 +93,7 @@ export function EquipmentAdmin() {
   );
 }
 
+/** One equipment row: inline edit/delete plus an expandable files panel. */
 function EquipmentRow({
   item,
   onChanged,
@@ -193,8 +201,8 @@ function EquipmentRow({
   );
 }
 
-// Manuals attached to one equipment profile: upload (add file) and delete
-// (remove file), reusing the documents/ingestion pipeline.
+/** The manuals attached to one equipment profile: upload and remove files,
+ *  reusing the document/ingestion pipeline. */
 function EquipmentFiles({
   equipmentId,
   onError,

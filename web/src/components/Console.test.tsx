@@ -1,3 +1,10 @@
+/**
+ * Tests for <Console>'s role-based tab visibility (FR-14).
+ *
+ * They confirm an admin sees the Users tab and a curator does not. Because the
+ * console mounts child screens that call the API on render, the whole `api`
+ * module is mocked so the tests stay pure and deterministic.
+ */
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Console } from "./Console";

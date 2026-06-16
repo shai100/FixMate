@@ -103,12 +103,17 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 - **Safety tests:** Verify that low-confidence answers escalate, that unsafe flags block answers, that approved-fix badging is accurate.
 
 ### 4.4 Naming & Documentation
-- **Default: No comments.** Code should speak for itself via clear names.
-- **When to comment:**
+- **Every module, class, and function carries a docstring (Python) or doc-comment (TypeScript/JSDoc).** Code is documented to be understandable by a developer who is new to this codebase and to the troubleshooting-RAG domain — explain *what it does, why it exists, and how it works*, and define jargon (RLS, RRF, BM25, groundedness, pgvector, OIDC) the first time it appears in a file.
+  - **Python:** a module docstring at the top of every `.py` file (a one-line role docstring for `__init__.py` package markers); a class docstring on every class (purpose, key fields, invariants); a function docstring on every public function (one-line summary, then `Args`/`Returns`/`Raises` where useful, plus a plain-language "how it works" paragraph for any non-trivial unit).
+  - **TypeScript/React:** a file-header doc-comment on every `.ts`/`.tsx`; a doc-comment on every exported component, function, hook, and type/interface (purpose, props/params, and a short "how it works" note for stateful components).
+  - **Config:** comment the non-default choices in comment-supporting files (`docker-compose.yml`, `pyproject.toml`, `vite.config.ts`, `eslint.config.js`, `index.html`). JSON files (`tsconfig.json`, `package.json`) can't hold comments — describe them in `docs/ARCHITECTURE.md` instead; never convert them to JSONC.
+- **Names still matter:** good docstrings complement clear names, they don't excuse vague ones.
+- **Inline comments** stay reserved for genuinely non-obvious logic — never restate what the code already says. Use them for:
   - Non-obvious algorithmic choices (e.g., reciprocal-rank fusion formula for BM25 + vector merge).
   - Hidden constraints (e.g., "chunk size must be < 512 tokens for reranker stability").
   - Workarounds for specific bugs (e.g., "Claude vision sometimes misses captions in rotated PDFs; always rotate to 0° before embedding").
   - Safety-critical decisions (e.g., "This cutoff (0.3) is derived from customer safety review; do not lower without explicit approval").
+- **Why:** the code is the product's most-read documentation. Teaching-level docstrings make the system legible to new engineers and keep it that way as it evolves (mirrors the build log §4.7, setup guide §4.8, and architecture guide §4.9). When you change a unit's behavior, update its docstring in the same commit.
 
 ### 4.5 Database & Data Integrity
 - **PostgreSQL RLS:** Tag every table with `organization_id`. Use RLS policies to enforce tenant isolation at the query level, not the application level.
@@ -284,8 +289,9 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 | 2026-06-12 | Initial | Document created; captured product spec, architecture, and development norms |
 | 2026-06-12 | Spec v1.1 | Resolved open stack options (Celery, Postgres FTS, Keycloak, MinIO→S3, Compose→ECS Fargate); LLM layer made dual-backend (local Ollama model for MVP on 4 GB GPU, Claude for production); local-PC deployment profile added as spec §8 |
 | 2026-06-12 | Build log | Added §4.7: every commit gets a companion `docs/` markdown file with "What was built" + "Verification evidence" |
+| 2026-06-16 | Docs standard | Rewrote §4.4: documentation is now the default — every module/class/function carries a teaching-level docstring/doc-comment; inline comments remain reserved for non-obvious logic. Applied across the whole codebase. |
 
 ---
 
-**Last Updated:** June 12, 2026  
+**Last Updated:** June 16, 2026  
 **Next Review:** When next major component is added or architectural assumption shifts

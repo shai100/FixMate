@@ -1,3 +1,13 @@
+"""The main question-answering endpoint — where a technician asks and gets an answer.
+
+This router exposes ``POST /conversations/{id}/ask``. It is the HTTP-facing thin
+layer: it records the user's question, gathers prior turns for multi-turn
+context, hands everything to the RAG pipeline in ``fixmate/answers/composer.py``,
+persists the assistant's reply, and shapes the result into ``AnswerOut`` for the
+client. All the retrieval/generation/safety logic lives in the composer, not
+here.
+"""
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,6 +23,12 @@ router = APIRouter(prefix="/conversations", tags=["ask"])
 
 
 async def _document_titles(session, citations: list[Citation]) -> dict[uuid.UUID, str]:
+    """Look up human-readable titles for the documents a set of citations point to.
+
+    Returns a ``{document_id: title}`` map so the response can show "Pump X
+    Manual, p.41" instead of a raw UUID. Skips citations with no document (e.g.
+    field-fix sources).
+    """
     doc_ids = {c.document_id for c in citations if c.document_id}
     if not doc_ids:
         return {}
@@ -28,6 +44,15 @@ async def ask(
     body: AskRequest,
     auth: AuthContext = Depends(get_current_user),
 ) -> AnswerOut:
+    """Answer a question within a conversation and return the grounded result.
+
+    Flow: validate the question -> load the conversation (RLS-scoped to the
+    caller's tenant) and its prior messages -> persist the new user turn -> call
+    ``compose_answer`` (retrieval + LLM + safety gates) -> persist the assistant
+    turn linked to its answer log -> assemble ``AnswerOut`` with citations and
+    figures. Raises 422 for an empty question and 404 if the conversation is not
+    visible to this tenant.
+    """
     question = body.question.strip()
     if not question:
         raise HTTPException(status_code=422, detail="question must not be empty")

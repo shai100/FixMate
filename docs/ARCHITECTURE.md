@@ -385,6 +385,16 @@ All config flows through [`settings.py`](../fixmate/core/settings.py) (env vars 
 - `ENV` — must be `local` for `DEV_AUTH=true` to be allowed.
 - `DATABASE_APP_URL` — the non-superuser role the app connects as so RLS actually applies.
 
+Most source and config files carry in-file documentation (CLAUDE.md §4.4). The two JSON
+config files that **cannot** hold comments are documented here instead:
+
+- [`../web/tsconfig.json`](../web/tsconfig.json) — TypeScript compiler options for the web
+  client: strict mode on (with `noUnusedLocals`/`noUnusedParameters`), `react-jsx` transform,
+  `ESNext` modules with bundler resolution, targeting `ES2022`; compiles `src/`.
+- [`../web/package.json`](../web/package.json) — the web client's npm manifest: scripts
+  (`dev`, `build` = `tsc` + Vite, `preview`, `test`, `lint`) and dependencies (React 18) /
+  dev-dependencies (TypeScript, Vite, Vitest + Testing Library, ESLint, the PWA plugin).
+
 ---
 
 ## 10. Testing

@@ -1,3 +1,13 @@
+"""The evaluation harness — automated safety + regression checks.
+
+Run with ``python -m fixmate.evals.run``. It builds a known demo tenant, then
+runs each case in ``safety_cases.yaml``: "answer" cases assert the pipeline
+escalates/grounds/cites as expected; "prescreen" cases assert the safety
+pre-screen flags hazards strongly enough. It also compares retrieval against a
+recorded baseline (informational drift, never a hard gate). Exit code 0 = all
+cases passed, 1 = at least one failed (so CI can gate on it).
+"""
+
 import argparse
 import asyncio
 import json
@@ -19,11 +29,17 @@ RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
 
 
 def load_cases() -> list[dict]:
+    """Load the list of eval cases from ``safety_cases.yaml``."""
     data = yaml.safe_load(CASES_PATH.read_text(encoding="utf-8"))
     return data["cases"]
 
 
 async def _eval_answer_case(tenant: DemoTenant, case: dict) -> list[str]:
+    """Run one "answer" case and return a list of failure reasons (empty = pass).
+
+    Compares the composed answer against the case's ``expect`` block: escalation,
+    citation count, field-fix citation, and groundedness / no-fabricated-specs.
+    """
     expect = case["expect"]
     answer = await compose_answer(tenant.org_id, tenant.equipment_id, case["question"])
     reasons: list[str] = []
@@ -49,6 +65,11 @@ async def _eval_answer_case(tenant: DemoTenant, case: dict) -> list[str]:
 
 
 async def _eval_prescreen_case(tenant: DemoTenant, case: dict) -> list[str]:
+    """Run one "prescreen" case and return failure reasons (empty = pass).
+
+    Asserts the safety advisory flags enough hazards and rates risk at least as
+    high as the case expects.
+    """
     expect = case["expect"]
     fix_text = case["fix_text"]
     results = await search(tenant.org_id, tenant.equipment_id, fix_text)
@@ -74,6 +95,7 @@ async def _eval_prescreen_case(tenant: DemoTenant, case: dict) -> list[str]:
 
 
 async def evaluate_case(tenant: DemoTenant, case: dict) -> list[str]:
+    """Dispatch a case to the right evaluator by its ``kind``."""
     if case["kind"] == "answer":
         return await _eval_answer_case(tenant, case)
     if case["kind"] == "prescreen":
@@ -82,6 +104,7 @@ async def evaluate_case(tenant: DemoTenant, case: dict) -> list[str]:
 
 
 async def collect_baseline(tenant: DemoTenant, questions: list[str]) -> list[dict]:
+    """Record the current retrieval results per question, to compare against later."""
     rows = []
     for q in questions:
         chunks = await search(tenant.org_id, tenant.equipment_id, q)
@@ -96,6 +119,7 @@ async def collect_baseline(tenant: DemoTenant, questions: list[str]) -> list[dic
 
 
 def _write_baseline(rows: list[dict]) -> None:
+    """Persist baseline rows as JSON Lines to ``baseline.jsonl``."""
     BASELINE_PATH.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
 
 
@@ -125,6 +149,11 @@ async def report_drift(tenant: DemoTenant) -> None:
 
 
 async def run_evals(record_baseline: bool = False) -> int:
+    """Build the eval tenant, run all cases, print results, and return an exit code.
+
+    With ``record_baseline`` it instead records the current retrieval as the new
+    baseline. Returns 0 if every case passed, 1 otherwise.
+    """
     cases = load_cases()
     print(f"Building eval tenant {EVAL_ORG!r} (ingest manual + approve field fix)...")
     tenant = await build_demo_tenant(EVAL_ORG)
@@ -159,6 +188,7 @@ async def run_evals(record_baseline: bool = False) -> int:
 
 
 def main() -> None:
+    """Parse CLI args and run the eval suite, exiting with its status code."""
     parser = argparse.ArgumentParser(description="Run FixMate safety + regression evals.")
     parser.add_argument(
         "--record-baseline",

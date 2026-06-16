@@ -1,3 +1,9 @@
+/**
+ * Tests for <EscalationCard> (the low-confidence "I don't know" path, FR-4).
+ *
+ * They verify the card shows the honest message, lists the nearest sections, and
+ * fires the escalate callback when the button is clicked.
+ */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";

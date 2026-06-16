@@ -1,4 +1,11 @@
+# Local development stack for FixMate. `docker compose up` starts the four
+# backing services the app needs; the API and worker run on the host against
+# them. Each service maps to a settings.py default so a fresh clone runs with no
+# extra config. (See setup-instructions.md.)
 services:
+  # PostgreSQL with the pgvector extension preinstalled: the main database AND
+  # the vector store for embeddings (one datastore keeps RLS tenant isolation
+  # simple). The healthcheck lets dependents wait until it's accepting queries.
   postgres:
     image: pgvector/pgvector:pg16
     environment:
@@ -8,15 +15,21 @@ services:
     ports: ["5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U fixmate"], interval: 5s, retries: 10 }
+  # Redis: the Celery message broker + result backend for async ingestion jobs.
   redis:
     image: redis:7
     ports: ["6379:6379"]
+  # MinIO: S3-compatible object storage for original PDFs and extracted figures.
+  # Same API as AWS S3, so cloud deploys swap the endpoint with no code change.
+  # Port 9000 is the S3 API; 9001 is the web console.
   minio:
     image: minio/minio
     command: server /data --console-address ":9001"
     environment: { MINIO_ROOT_USER: fixmate, MINIO_ROOT_PASSWORD: fixmate123 }
     ports: ["9000:9000", "9001:9001"]
     volumes: [miniodata:/data]
+  # Ollama: serves the local open-weight models (generation + BGE-M3 embeddings)
+  # used in dev. Embeddings always run here even when LLM_PROVIDER=anthropic.
   ollama:
     image: ollama/ollama
     ports: ["11434:11434"]
@@ -24,6 +37,8 @@ services:
     # GPU passthrough (WSL2 + NVIDIA driver). Alternative: run Ollama natively on
     # Windows and set OLLAMA_BASE_URL=http://host.docker.internal:11434 (spec §8.2).
     deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }
+  # Keycloak: OIDC identity provider for production auth (Phase 9). Behind the
+  # "auth" profile so it doesn't start by default — dev uses header auth instead.
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     command: start-dev

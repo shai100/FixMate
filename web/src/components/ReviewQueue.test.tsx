@@ -1,3 +1,10 @@
+/**
+ * Tests for <ReviewQueue> (the curation queue list).
+ *
+ * They verify the count badge, that selecting an item opens its detail view, and
+ * the empty state. The `api` module is mocked so the queue's load-on-mount call
+ * returns controlled data.
+ */
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";

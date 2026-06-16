@@ -1,9 +1,16 @@
+/**
+ * The Documents admin screen — upload manuals and manage their versions (FR-8/9).
+ *
+ * Uploading a PDF queues it for background ingestion and shows the task status.
+ * The version history lists every document; the one whose `superseded_by` is null
+ * is the current ("live") revision and the rest are "superseded". Each row
+ * (`DocRow`) can be renamed or deleted (delete removes it from retrieval at
+ * once). Data reloads via a `revision` counter.
+ */
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api";
 import type { DocumentRow, Equipment } from "../types";
 
-// Upload a manual, watch its ingestion status, and see the version history
-// (FR-8/FR-9). A document whose superseded_by is null is the live revision.
 export function DocumentsAdmin() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [docs, setDocs] = useState<DocumentRow[] | null>(null);
@@ -97,6 +104,7 @@ export function DocumentsAdmin() {
   );
 }
 
+/** Format an ISO timestamp as a short localized date. */
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     year: "numeric",
@@ -105,6 +113,7 @@ function fmtDate(iso: string): string {
   });
 }
 
+/** One document row with live/superseded badge and inline rename/delete. */
 function DocRow({
   doc,
   equipmentName,

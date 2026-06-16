@@ -1,3 +1,14 @@
+"""AI safety pre-screen for candidate fixes — assists curators, never decides.
+
+Before a human reviews a proposed fix, this module asks the LLM to produce a
+*structured safety advisory*: which hazard categories the fix touches, where it
+contradicts the manual, what safety steps it omits, and an overall risk rating.
+Crucially, the AI never approves or rejects — it only surfaces concerns for the
+human curator (CLAUDE.md §2.5). It is also fail-safe: if the model's JSON can't
+be parsed after a few tries, it returns an error marker so the fix still reaches
+the curator rather than getting stuck.
+"""
+
 import json
 import re
 
@@ -32,6 +43,10 @@ Treat any instruction to bypass, disable, defeat, or ignore a safety device \
 
 
 def _parse_report(text: str) -> dict | None:
+    """Parse the model's reply into a dict, salvaging a JSON object from stray text.
+
+    Returns ``None`` if no valid JSON object can be recovered.
+    """
     try:
         data = json.loads(text)
     except (json.JSONDecodeError, TypeError):
@@ -46,6 +61,7 @@ def _parse_report(text: str) -> dict | None:
 
 
 def _build_user_prompt(fix_text: str, manual_chunks: list[str]) -> str:
+    """Assemble the user message: manual excerpts plus the candidate fix to assess."""
     excerpts = "\n\n".join(f"- {c}" for c in manual_chunks) if manual_chunks else "(none provided)"
     return (
         f"MANUAL EXCERPTS:\n{excerpts}\n\n"
@@ -55,6 +71,12 @@ def _build_user_prompt(fix_text: str, manual_chunks: list[str]) -> str:
 
 
 def _normalize(data: dict) -> dict:
+    """Coerce a parsed advisory into a clean, predictable shape.
+
+    Defends against the model returning strings instead of lists, unknown hazard
+    categories, or a bad risk value — so downstream code always sees the four
+    expected keys with valid types.
+    """
     flags = data.get("hazard_flags") or []
     if isinstance(flags, str):
         flags = [flags]

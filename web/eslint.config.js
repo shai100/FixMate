@@ -1,3 +1,10 @@
+// ESLint configuration for the web client (flat-config format).
+//
+// Lints all .ts/.tsx files with the recommended JavaScript + TypeScript rule
+// sets, plus React-specific rules: react-hooks enforces the rules of hooks
+// (correct dependency arrays, no conditional hooks), and react-refresh warns
+// about patterns that break fast-refresh during development. The build output
+// directories are ignored. `npm run lint` runs this with a zero-warnings policy.
 import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";

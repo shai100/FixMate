@@ -1,3 +1,23 @@
+"""The RAG (Retrieval-Augmented Generation) answer pipeline — FixMate's core.
+
+This module turns a technician's question into a safe, grounded, cited answer.
+"RAG" means: instead of asking the LLM to answer from memory (which could
+fabricate dangerous specs), we first *retrieve* relevant passages from the
+customer's own manuals/fixes, then ask the LLM to answer *only* from those
+passages. Several safety gates wrap that core step:
+
+  1. **Retrieve** the most relevant chunks (``fixmate/retrieval/service.py``).
+  2. **Confidence gate** — if the best match is weak, don't even ask the LLM;
+     return an escalation response (FR-4).
+  3. **Compose** — prompt the LLM with the sources and the question.
+  4. **Citation + groundedness validation** — every numeric/part claim must
+     appear in the sources and every citation must point at a retrieved chunk.
+     If not, retry once with feedback; if it still fails, escalate.
+  5. **Log** the whole thing immutably (``AnswerLog``) for audit/regression.
+
+The public entry point is ``compose_answer``; everything else here supports it.
+"""
+
 import re
 import uuid
 from dataclasses import dataclass
@@ -25,6 +45,9 @@ _CITATION = re.compile(r"\[chunk:([0-9a-fA-F][0-9a-fA-F-]{3,35})\]")
 
 @dataclass
 class Citation:
+    """One source backing a claim: which chunk, from which document/page, and
+    whether it came from a manual or a field fix."""
+
     chunk_id: uuid.UUID
     document_id: uuid.UUID | None
     source_type: str
@@ -33,6 +56,13 @@ class Citation:
 
 @dataclass
 class Answer:
+    """The complete result of ``compose_answer``.
+
+    ``escalated`` is True when the pipeline declined to answer (low confidence or
+    failed grounding) and returned an escalation message instead. ``answer_log_id``
+    ties this answer to its immutable audit record.
+    """
+
     text: str
     confidence: str
     citations: list[Citation]
@@ -42,6 +72,7 @@ class Answer:
 
 
 def _parse_cited_tokens(text: str) -> list[str]:
+    """Extract the distinct ``[chunk:<id>]`` tokens an answer cites, in order."""
     seen: list[str] = []
     for m in _CITATION.finditer(text):
         tok = m.group(1).lower()
@@ -77,6 +108,8 @@ def _resolve_citations(text: str, by_id: dict[str, ScoredChunk]) -> tuple[list[s
 async def _fix_badges(
     session, chunks: list[ScoredChunk]
 ) -> dict[str, tuple[str | None, str | None]]:
+    """Look up the verification badge (approver name + approval date) for any
+    field-fix chunks, so the prompt can present them as human-verified."""
     fix_ids = [c.fix_id for c in chunks if c.source_type == "field_fix" and c.fix_id]
     if not fix_ids:
         return {}
@@ -95,6 +128,8 @@ async def _fix_badges(
 
 
 async def _figures_for(session, chunks: list[ScoredChunk]) -> list[dict]:
+    """Collect diagrams that live on the same document pages as the retrieved
+    chunks, each with a fresh signed URL, so the answer can show relevant images."""
     pairs = {(c.document_id, c.page) for c in chunks if c.document_id and c.page is not None}
     if not pairs:
         return []
@@ -125,8 +160,22 @@ async def compose_answer(
     conversation_id: uuid.UUID | None = None,
     provider: LLMProvider | None = None,
 ) -> Answer:
-    """RAG answer pipeline (plan §5.5): search → confidence gate → LLM compose →
-    citation validation → groundedness check (retry once, then escalate) → log.
+    """Answer one question end-to-end and return a grounded ``Answer`` (plan §5.5).
+
+    Pipeline: search -> confidence gate -> LLM compose -> citation validation ->
+    groundedness check (retry once, then escalate) -> log. The function always
+    writes an ``AnswerLog`` and always returns an ``Answer`` (a low-confidence or
+    ungrounded result comes back with ``escalated=True`` and an escalation
+    message rather than raising).
+
+    Args:
+        org_id: Tenant the question belongs to (scopes retrieval + logging).
+        equipment_id: Optional equipment to restrict retrieval to.
+        question: The technician's question.
+        history: Prior conversation turns (``[{"role", "content"}, ...]``) for
+            multi-turn context.
+        conversation_id: Conversation to attach the answer log to, if any.
+        provider: LLM backend override; defaults to the configured provider.
     """
     history = history or []
     org_id = uuid.UUID(str(org_id))

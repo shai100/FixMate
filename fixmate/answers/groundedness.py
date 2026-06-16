@@ -1,3 +1,14 @@
+"""Fabrication detection — the safety gate that catches invented numbers.
+
+An LLM might confidently state "torque to 45 Nm" even when no source says so, and
+a wrong torque/pressure/voltage value can hurt a technician or wreck equipment.
+This module scans a finished answer for numeric claims and part numbers and
+verifies each one actually appears (verbatim, ignoring spacing) in the retrieved
+source text. Any claim that isn't found is a "violation" and the composer treats
+the answer as ungrounded (CLAUDE.md §8.1). It is deliberately backend-agnostic —
+the same check runs whether the answer came from the local or cloud model.
+"""
+
 import re
 
 # Numeric safety claims: torque, pressure, electrical, temperature, dimensions,
@@ -12,6 +23,7 @@ PART_NUMBER = re.compile(r"\b[A-Z]{2,}-?\d{2,}[A-Z0-9-]*\b")
 
 
 def _normalize(s: str) -> str:
+    """Collapse a claim to a spacing/case-insensitive token for comparison."""
     # Strip ALL whitespace and the middle dot so spacing variants of the same
     # claim ("12 Nm" / "12Nm" / "N·m") collapse to one comparable token before
     # substring containment against the retrieved corpus.

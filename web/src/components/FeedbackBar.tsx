@@ -1,16 +1,26 @@
+/**
+ * The "Did it help?" bar under each answer (FR-12/FR-13).
+ *
+ * It's a small state machine. From `idle`: tapping Yes records a positive signal
+ * and shows a thank-you; tapping No opens the <FixSubmitForm> so the technician
+ * can propose a better fix, which is submitted to the curation queue. The
+ * `State` type enumerates every screen the bar can be in (idle, submitting, the
+ * two done states, and the fix form), which keeps the render logic a simple
+ * switch on the current state.
+ */
 import { useState } from "react";
 import { api, ApiError } from "../api";
 import { FixSubmitForm } from "./FixSubmitForm";
 import { Icon } from "./Icon";
 
+/** The feedback bar's possible UI states. */
 type State = "idle" | "submitting" | "thanks" | "fix-form" | "fix-submitted";
 
-// "Did it help?" (FR-13). Yes → positive signal. No → opens the candidate-fix
-// form (FR-12), which submits a fix that enters the curation queue.
 export function FeedbackBar({ messageId }: { messageId: string }) {
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState<string | null>(null);
 
+  // Handle the Yes/No tap: No opens the fix form; Yes records a positive signal.
   async function sayHelped(helped: boolean) {
     setError(null);
     if (!helped) {
@@ -27,6 +37,7 @@ export function FeedbackBar({ messageId }: { messageId: string }) {
     }
   }
 
+  // Submit a proposed fix (the "No" path) to the feedback endpoint for review.
   async function submitFix(fixText: string, photos: string[]) {
     setState("submitting");
     setError(null);

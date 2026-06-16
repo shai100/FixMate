@@ -1,5 +1,13 @@
 """initial schema: tenancy, documents, chunks, fixes, audit, RLS
 
+This is the first migration — it builds FixMate's entire database from empty:
+all the tables that mirror ``fixmate/core/models.py`` (organizations, users,
+equipment, documents, chunks, fixes, conversations, messages, answer logs,
+figures, feedback, audit events), the pgvector extension for embeddings, and —
+critically — the Row-Level Security policies that enforce tenant isolation
+(``TENANT_TABLES``). Migrations run as the database *owner* role because they
+issue DDL and grant privileges.
+
 Revision ID: 0001
 Revises:
 Create Date: 2026-06-12

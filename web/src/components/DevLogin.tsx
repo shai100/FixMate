@@ -1,12 +1,19 @@
+/**
+ * The dev-only sign-in screen.
+ *
+ * Two ways in: if the backend has auto-login enabled it drops straight into the
+ * demo tenant as admin (no typing); otherwise it shows a form where a developer
+ * pastes the org/user UUIDs printed by `scripts/seed_demo.py` and picks a role.
+ * Either way it stores the chosen identity (via `setIdentity`) and notifies the
+ * parent through `onLogin`. This is replaced by the Keycloak login redirect when
+ * Phase 9 reaches the client.
+ */
 import { useEffect, useState } from "react";
 import { setIdentity, type DevIdentity } from "../auth";
 import { api } from "../api";
 import { Icon } from "./Icon";
 
-// Dev-only identity entry (Phase 6 dev auth). Replaced by the Keycloak login
-// redirect when Phase 9 reaches the client. Lets a developer paste the org/user
-// UUIDs printed by scripts/seed_demo.py and start chatting. Styled as the
-// mockup's sign-in screen (app/index.html).
+/** @param onLogin Called with the chosen identity once sign-in succeeds. */
 export function DevLogin({ onLogin }: { onLogin: (id: DevIdentity) => void }) {
   const [orgId, setOrgId] = useState("");
   const [userId, setUserId] = useState("");

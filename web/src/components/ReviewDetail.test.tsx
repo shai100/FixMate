@@ -1,3 +1,10 @@
+/**
+ * Tests for <ReviewDetail>'s curation actions (approve / reject / flag unsafe).
+ *
+ * They verify edits flow through "Edit & Approve", that reject/unsafe require a
+ * reason, and that each action calls the right API method. The API methods are
+ * mocked so no network happens and calls can be asserted on.
+ */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";

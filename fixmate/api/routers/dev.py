@@ -1,3 +1,13 @@
+"""Local-only convenience endpoint for demo auto-login.
+
+In local dev the web client can skip manual org/user UUID entry by calling
+``GET /dev/auto-login``, which resolves (and, the first time, provisions) an
+admin of the demo tenant. It is double-gated (``dev_auth`` *and*
+``dev_auto_login``) and runs as a bootstrap operation outside any tenant context,
+so it must never be reachable in a real deployment — ``main._guard_auth_config``
+already forbids ``dev_auth`` outside ``local``.
+"""
+
 import uuid
 
 from fastapi import APIRouter, HTTPException

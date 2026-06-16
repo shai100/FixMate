@@ -21,6 +21,12 @@ _ROLE_PRECEDENCE = ("admin", "curator", "tech")
 
 
 def _extract_role(claims: dict) -> str | None:
+    """Pick the single most-privileged FixMate role from a token's realm roles.
+
+    Keycloak tokens can list many roles; we collapse them to one by walking
+    ``_ROLE_PRECEDENCE`` (admin first) and returning the first match, or ``None``
+    if the token carries no FixMate role at all.
+    """
     granted = set(claims.get("realm_access", {}).get("roles", []))
     return next((r for r in _ROLE_PRECEDENCE if r in granted), None)
 
@@ -74,6 +80,14 @@ def decode_token(
 
 
 class OIDCValidator:
+    """Validates Keycloak access tokens against a realm's published signing keys.
+
+    Holds a ``PyJWKClient`` that fetches and caches the realm's public keys, so
+    most validations need no network call. ``validate()`` is the method request
+    handling uses; the heavy lifting (signature/claim checks) is delegated to the
+    standalone ``decode_token`` so it stays unit-testable.
+    """
+
     def __init__(
         self,
         jwks_uri: str,
@@ -91,6 +105,11 @@ class OIDCValidator:
         self._verify_audience = verify_audience
 
     def validate(self, token: str) -> AuthContext:
+        """Resolve the token's signing key, then verify it and map to an AuthContext.
+
+        Raises ``jwt.InvalidTokenError`` on any failure (bad signature, expiry,
+        wrong issuer, missing claims).
+        """
         signing_key = self._jwks.get_signing_key_from_jwt(token).key
         return decode_token(
             token,
@@ -102,11 +121,17 @@ class OIDCValidator:
 
 
 def issuer_url() -> str:
+    """The realm's issuer URL; tokens are accepted only if their ``iss`` matches."""
     return f"{settings.keycloak_base_url}/realms/{settings.keycloak_realm}"
 
 
 @functools.lru_cache(maxsize=1)
 def get_validator() -> OIDCValidator:
+    """Return the process-wide ``OIDCValidator``, built once from ``settings``.
+
+    Cached with ``lru_cache`` so the JWKS client (and its key cache) is shared
+    across all requests rather than rebuilt each time.
+    """
     issuer = issuer_url()
     return OIDCValidator(
         jwks_uri=f"{issuer}/protocol/openid-connect/certs",

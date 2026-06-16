@@ -1,3 +1,19 @@
+"""Hybrid retrieval — finds the most relevant knowledge for a question.
+
+"Hybrid" because it combines two complementary searches and blends them:
+
+  - **Dense vector search** (``vector.py``) finds passages that *mean* the same
+    thing as the query, even with different words.
+  - **Keyword search** (``keyword.py``) finds *exact* tokens — error codes like
+    "E47", part numbers, specs — which vector search tends to blur away.
+
+The two ranked lists are merged with Reciprocal Rank Fusion (``fusion.py``),
+the top candidates are re-scored by a reranker (``rerank.py``), approved field
+fixes get a ranking boost (the business "moat"), and the best ``top_k`` are
+returned. ``search`` is the single public entry point used by the answer
+pipeline.
+"""
+
 import uuid
 from dataclasses import dataclass
 
@@ -14,6 +30,13 @@ CANDIDATE_POOL = 20  # how many fused candidates to rerank
 
 @dataclass
 class ScoredChunk:
+    """A retrieved chunk plus its final relevance ``score`` (higher = better).
+
+    This is the shape retrieval hands to the rest of the system; ``source_type``
+    distinguishes manual content from field fixes, and ``fix_id`` links field-fix
+    chunks back to their ``Fix`` for badge lookup.
+    """
+
     chunk_id: uuid.UUID
     document_id: uuid.UUID | None
     source_type: str
@@ -29,11 +52,25 @@ async def search(
     query: str,
     top_k: int = 8,
 ) -> list[ScoredChunk]:
-    """Hybrid retrieval: vector + keyword → RRF → field-fix boost → rerank → top_k.
+    """Find the ``top_k`` most relevant chunks for ``query`` (the retrieval entry point).
+
+    Steps: embed the query -> run vector + keyword search (both RLS-scoped to the
+    tenant and optionally filtered to one equipment profile) -> fuse the two
+    rankings with RRF -> rerank the top candidates -> boost approved field fixes
+    -> sort and return the best ``top_k`` as ``ScoredChunk``s.
 
     The boost is applied to the *rerank* scores (not just fusion) so an approved
     field fix outranks comparably-relevant manual content in the final order —
     the approved-fix moat (spec §2.4), provable by the Phase 8 moat test.
+
+    Args:
+        org_id: Tenant whose index to search.
+        equipment_id: If set, restrict results to this equipment's material.
+        query: The natural-language search text.
+        top_k: How many results to return.
+
+    Returns:
+        ``ScoredChunk``s ordered best-first; empty if nothing matched.
     """
     [qvec] = await embed([query])
 

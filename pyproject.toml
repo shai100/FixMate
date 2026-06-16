@@ -1,8 +1,19 @@
+# Python project metadata, dependencies, and tool config for the FixMate backend.
+# `pip install -e .` installs the runtime deps; `pip install -e .[dev]` adds the
+# test/lint tools. The [tool.*] sections configure pytest (async mode + the
+# `integration` marker for tests needing live services) and ruff (lint/format).
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
+# Runtime dependencies, grouped by role:
+#   web API:    fastapi, uvicorn, python-multipart, pyjwt
+#   database:   sqlalchemy, asyncpg, alembic, pgvector
+#   workers:    celery, redis
+#   LLM/IO:     httpx, anthropic, boto3 (S3), pymupdf (PDF)
+#   config:     pydantic-settings, pyyaml
 name = "fixmate"
 version = "0.1.0"
 description = "AI-powered troubleshooting assistant for field technicians"

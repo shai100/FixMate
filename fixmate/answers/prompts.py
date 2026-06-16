@@ -1,3 +1,13 @@
+"""Prompt templates and source formatting for the answer pipeline.
+
+This is the "wording" layer: the system prompt that tells the LLM how to behave
+(answer only from sources, safety warnings first, cite everything, abstain when
+unsupported), the function that renders retrieved chunks into the SOURCES block,
+the retry instruction used when grounding fails, and the canned escalation
+message shown when the system declines to answer. Keeping all of this in one
+place makes the model's contract auditable and easy to tune.
+"""
+
 from fixmate.retrieval.service import ScoredChunk
 
 # Structured abstention: the model emits this sentinel (and nothing else) when the
@@ -41,6 +51,7 @@ recommend escalation to a senior technician rather than guessing."""
 
 
 def _badge(approver: str | None, approved_on: str | None) -> str:
+    """Build the "Field-verified — approved by X on Y" badge text for a fix."""
     who = approver or "a curator"
     when = approved_on or "an earlier date"
     return f"Field-verified — approved by {who} on {when}"
@@ -76,6 +87,7 @@ def build_user_prompt(
     chunks: list[ScoredChunk],
     fix_badges: dict[str, tuple[str | None, str | None]] | None = None,
 ) -> str:
+    """Assemble the full user message: the SOURCES block followed by the question."""
     return (
         f"SOURCES:\n{render_sources(chunks, fix_badges)}\n\n"
         f"QUESTION: {question}\n\n"
@@ -84,6 +96,7 @@ def build_user_prompt(
 
 
 def groundedness_retry_suffix(violations: list[str]) -> str:
+    """Build the corrective follow-up prompt naming the unsupported values to fix."""
     joined = ", ".join(violations)
     return (
         f"\n\nYour previous answer included values not found in the SOURCES: {joined}. "

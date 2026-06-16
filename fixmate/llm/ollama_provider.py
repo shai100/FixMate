@@ -1,3 +1,11 @@
+"""The Ollama (local, open-weight) LLM backend used for dev / the MVP profile.
+
+Implements the ``LLMProvider`` contract by calling a locally-running Ollama
+server (default model: ``qwen3:4b``) over HTTP. It runs fully offline on modest
+hardware (spec §8.3), which is why it's the default for local development. It has
+no vision capability, so figure captioning falls back to the Anthropic backend.
+"""
+
 import re
 
 import httpx
@@ -11,11 +19,19 @@ _THINK_BLOCK = re.compile(r"^.*?</think>\s*", re.DOTALL)
 
 
 class OllamaProvider:
+    """LLM backend backed by a local Ollama server."""
+
     def __init__(self, base_url: str, model: str):
         self._base_url = base_url.rstrip("/")
         self._model = model
 
     async def complete(self, request: CompletionRequest) -> CompletionResult:
+        """Generate a completion via Ollama's ``/api/chat``, stripping reasoning.
+
+        Disables qwen3's "thinking" mode so the whole token budget goes to answer
+        prose, strips any leftover ``</think>`` reasoning block, and uses a long
+        timeout because CPU generation can take minutes.
+        """
         payload = {
             "model": self._model,
             "messages": [{"role": "system", "content": request.system}, *request.messages],
@@ -44,6 +60,7 @@ class OllamaProvider:
         )
 
     async def caption_image(self, image: bytes, media_type: str, context: str) -> str:
+        """Not supported — the local model has no vision; use the Anthropic backend."""
         # spec §8.3 keeps figure captioning on the Claude backend; the local
         # generation model (qwen3:4b) has no vision capability.
         raise NotImplementedError("use anthropic backend for captioning")

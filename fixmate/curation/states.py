@@ -1,3 +1,13 @@
+"""The fix lifecycle state machine — the single authority on legal transitions.
+
+A fix moves through a fixed set of states (submitted -> pending_review ->
+approved/rejected/unsafe -> retired, with a re-confirmation path back to review).
+This module declares exactly which moves are allowed; the curation service checks
+``can_transition`` before every state change so an invalid move (e.g. approving a
+rejected fix) is impossible. Keeping the rules here, separate from the DB
+constraint and the API, means there's one place to read and reason about them.
+"""
+
 # Fix lifecycle (Appendix A.5): submitted | pending_review | approved | rejected
 # | unsafe | retired. The DB CheckConstraint (Phase 1) and the API payloads
 # (Phase 8) reference the same set; this module is the single authority on which
@@ -13,4 +23,5 @@ ALLOWED_TRANSITIONS: set[tuple[str, str]] = {
 
 
 def can_transition(src: str, dst: str) -> bool:
+    """Return True if moving a fix from state ``src`` to ``dst`` is allowed."""
     return (src, dst) in ALLOWED_TRANSITIONS

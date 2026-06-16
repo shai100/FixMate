@@ -1,9 +1,14 @@
+/**
+ * The form a technician fills in to propose a fix (FR-12).
+ *
+ * Opened from the <FeedbackBar> when an answer didn't help. It collects the
+ * fix text and optional photos; each selected photo is read into a base64 data
+ * URL (via FileReader) so it can be sent as JSON to the feedback endpoint.
+ * Submitting calls `onSubmit(text, photos)`; the parent handles the API call.
+ */
 import { useState } from "react";
 import { Icon } from "./Icon";
 
-// Candidate-fix submission (FR-12). Opened when the technician taps "No" in the
-// FeedbackBar. Photos are read as base64 data URLs and passed through to the
-// feedback endpoint (Phase 7 accepts photos[]).
 export function FixSubmitForm({
   onSubmit,
   onCancel,
@@ -16,6 +21,7 @@ export function FixSubmitForm({
   const [fixText, setFixText] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
 
+  // Read each chosen image into a base64 data URL and append it to the photo list.
   async function handleFiles(files: FileList | null) {
     if (!files) return;
     const encoded = await Promise.all(

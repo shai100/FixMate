@@ -1,13 +1,19 @@
+/**
+ * The technician Profile screen.
+ *
+ * Shows the real signed-in identity (org id, user id, role) and an avatar. The
+ * usage stats and shared-fix history are placeholders labelled as a Phase 2
+ * preview — they're intentionally dashes, not fabricated numbers.
+ */
 import type { DevIdentity } from "../../auth";
 import { Icon } from "../Icon";
 
+/** Two-letter avatar initials derived from an id (falls back to "FX"). */
 function initials(id: string): string {
   const clean = id.replace(/[^a-z0-9]/gi, "");
   return (clean.slice(0, 2) || "FX").toUpperCase();
 }
 
-// Technician profile. Usage analytics and shared-fix history are Phase 2, so we
-// show the real signed-in identity and label the rest as a preview.
 export function ProfileScreen({
   identity,
   onOpenSettings,

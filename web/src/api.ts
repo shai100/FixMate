@@ -1,3 +1,15 @@
+/**
+ * The single HTTP client for talking to the FixMate backend.
+ *
+ * Every screen calls methods on the exported `api` object rather than using
+ * `fetch` directly, so request shaping, auth headers, and error handling live in
+ * one place. Two private helpers do the heavy lifting: `request<T>` for endpoints
+ * that return JSON, and `requestVoid` for 204-No-Content endpoints (the curation
+ * actions). Both attach the dev-auth headers and convert any non-2xx response
+ * into a typed `ApiError` the UI can display. The methods are grouped by feature
+ * (chat, curation, equipment/document/fix/user admin) and each mirrors one
+ * backend route.
+ */
 import { authHeaders } from "./auth";
 import type {
   Answer,
@@ -12,6 +24,8 @@ import type {
   UserRow,
 } from "./types";
 
+/** Error thrown for any non-2xx API response; carries the HTTP status and the
+ *  server's detail message so callers can branch on `status` or show `detail`. */
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -22,6 +36,8 @@ class ApiError extends Error {
   }
 }
 
+/** Make a request and parse the JSON response as type `T`, throwing `ApiError`
+ *  on failure. Auto-sets the JSON content type unless the body is FormData. */
 async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -50,7 +66,8 @@ async function request<T>(
   return (await res.json()) as T;
 }
 
-// For 204 No Content endpoints (curation actions): same error handling, no body.
+/** Like `request`, but for endpoints that return 204 No Content (no body to
+ *  parse). Same auth + error handling. */
 async function requestVoid(path: string, init: RequestInit = {}): Promise<void> {
   const res = await fetch(path, {
     ...init,
@@ -72,6 +89,8 @@ async function requestVoid(path: string, init: RequestInit = {}): Promise<void> 
   }
 }
 
+/** The backend API surface, one method per endpoint. Import this object and call
+ *  e.g. `api.ask(convId, question)`; each method returns a typed Promise. */
 export const api = {
   listEquipment(): Promise<Equipment[]> {
     return request<Equipment[]>("/equipment");

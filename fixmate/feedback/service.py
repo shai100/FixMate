@@ -1,3 +1,12 @@
+"""Records technician feedback and turns it into useful signals.
+
+This is the closing of the learning loop. When a technician says an answer
+"helped", we reinforce the chunks it cited (a ranking signal for the future).
+When they say it "didn't help" and propose a better fix, we open that fix as a
+candidate and send it straight to the curation review queue — never auto-serving
+it (CLAUDE.md §2.5). One public function, ``record_feedback``, does both.
+"""
+
 import uuid
 from dataclasses import dataclass
 
@@ -8,7 +17,7 @@ from fixmate.core.models import AnswerLog, AuditEvent, Chunk, Conversation, Feed
 
 
 class MessageNotFound(Exception):
-    pass
+    """Raised when the message being given feedback on doesn't exist."""
 
 
 class EquipmentRequired(Exception):
@@ -17,6 +26,8 @@ class EquipmentRequired(Exception):
 
 @dataclass
 class FeedbackResult:
+    """Outcome of recording feedback; ``fix_id`` is set when a candidate fix was opened."""
+
     feedback_id: uuid.UUID
     fix_id: uuid.UUID | None
     helped: bool

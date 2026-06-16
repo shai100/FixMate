@@ -1,3 +1,14 @@
+"""The document-ingestion pipeline — turns an uploaded PDF into searchable data.
+
+This is the orchestration layer that ties together the smaller ingestion pieces:
+extract the page text (``pdf.py``) -> split it into overlapping chunks
+(``chunking.py``) -> embed each chunk (``llm/embeddings.py``) -> extract and
+caption figures (``pdf.py`` + ``figures.py``) -> write everything to the database
+and object storage, handling version supersession. After this runs, the manual is
+fully retrievable. ``ingest_document`` is the async core; ``ingest_document_sync``
+wraps it for the Celery worker.
+"""
+
 import asyncio
 import uuid
 from pathlib import Path
@@ -21,10 +32,19 @@ async def ingest_document(
     title: str | None = None,
     provider: LLMProvider | None = None,
 ) -> uuid.UUID:
-    """Parse → chunk → embed → store a manual for one tenant.
+    """Ingest one PDF manual for a tenant and return the new document's id.
 
-    Document identity is (equipment_id, title): re-ingesting the same title
-    creates a new version and supersedes the prior one (FR-9 versioning).
+    Runs the full pipeline (extract -> chunk -> embed -> caption figures -> store)
+    and writes a ``Document`` plus its ``Chunk`` and ``Figure`` rows in a single
+    transaction. Document identity is ``(equipment_id, title)``: re-ingesting the
+    same title creates a *new version* and marks the previous one superseded, so
+    answers always cite the current revision (FR-9 versioning).
+
+    Args:
+        org_id / equipment_id: Tenant and equipment the manual belongs to.
+        pdf_path: Path to the PDF on disk.
+        title: Display title; defaults to the file name. Drives version lineage.
+        provider: LLM backend for figure captioning; defaults to configured one.
     """
     org_id = uuid.UUID(str(org_id))
     equipment_id = uuid.UUID(str(equipment_id))
@@ -98,6 +118,7 @@ def ingest_document_sync(
     pdf_path: str | Path,
     title: str | None = None,
 ) -> uuid.UUID:
+    """Blocking wrapper around ``ingest_document`` for the Celery worker."""
     # Sync entry for the Celery task (workers are not async). asyncio.run gives
     # each task its own event loop, matching the NullPool engine assumption.
     return asyncio.run(ingest_document(org_id, equipment_id, pdf_path, title))

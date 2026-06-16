@@ -1,3 +1,21 @@
+/**
+ * Root component and top-level router.
+ *
+ * <App> decides what the whole screen shows based on who is signed in:
+ *   - nobody signed in        -> the dev login screen
+ *   - a curator or admin      -> the desktop curator/admin <Console>
+ *   - a technician            -> the phone-framed <TechnicianApp>
+ *
+ * <TechnicianApp> is the field-technician experience: a tabbed shell (Equipment,
+ * Packs, Profile, plus a Settings screen and a Chat screen reached by selecting
+ * equipment). It owns the small amount of cross-screen state — the loaded
+ * equipment list, the chosen equipment, and which screen is visible — and passes
+ * it down to each screen component. The role always comes from the authenticated
+ * identity, never user input (CLAUDE.md §6).
+ *
+ * This app deliberately routes by state rather than a URL router; it's a small,
+ * mostly-linear flow, so a `screen` string in state is simpler than routes.
+ */
 import { useEffect, useState } from "react";
 import { getIdentity, clearIdentity, type DevIdentity } from "./auth";
 import { api, ApiError } from "./api";
@@ -20,6 +38,7 @@ const TABS: TabDef[] = [
 ];
 const TAB_IDS = new Set<Screen>(["equipment", "packs", "profile"]);
 
+/** Top-level router: chooses login / console / technician app by identity + role. */
 export function App() {
   const [identity, setIdentityState] = useState<DevIdentity | null>(getIdentity());
 
@@ -54,6 +73,9 @@ export function App() {
   return <TechnicianApp identity={identity} onSignOut={signOut} />;
 }
 
+/** The field-technician experience: a phone-framed, tabbed shell that loads the
+ *  equipment list and switches between the equipment/chat/packs/profile/settings
+ *  screens. */
 function TechnicianApp({
   identity,
   onSignOut,

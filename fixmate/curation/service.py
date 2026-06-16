@@ -1,3 +1,21 @@
+"""The fix-curation service — the business logic behind FixMate's moat.
+
+This module owns the *rules* of the fix lifecycle that the API
+(``api/routers/curation.py``) merely exposes. Its responsibilities:
+
+  - Build the **review queue** with everything a curator needs, lazily running
+    the AI safety pre-screen once per fix.
+  - Move fixes through their lifecycle (**approve / reject / unsafe / retire**),
+    enforcing legal transitions (``states.py``) and reviewer roles.
+  - Keep the **search index in sync**: approving indexes a fix as ``field_fix``
+    chunks (making it retrievable and able to outrank manuals); editing
+    re-indexes; retiring/deleting removes the chunks. The index is the single
+    source of truth (spec §2.4).
+  - Write an **audit event** for every state change (spec §8.2).
+
+Three exceptions signal the failure modes callers map to HTTP codes.
+"""
+
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -17,7 +35,7 @@ REVIEWER_ROLES = ("curator", "admin")
 
 
 class FixNotFound(Exception):
-    pass
+    """Raised when a fix id doesn't exist (or isn't visible to this tenant)."""
 
 
 class IllegalTransition(Exception):
@@ -30,6 +48,8 @@ class NotAuthorized(Exception):
 
 @dataclass
 class FixSummary:
+    """A fix plus resolved submitter/reviewer names, for the admin listing."""
+
     fix_id: uuid.UUID
     state: str
     question: str | None
@@ -47,6 +67,10 @@ class FixSummary:
 
 @dataclass
 class ReviewItem:
+    """A fix bundled with all the evidence a curator needs to decide on it:
+    the original Q&A, the proposed text, relevant manual excerpts, and the AI
+    pre-screen advisory."""
+
     fix_id: uuid.UUID
     state: str
     question: str | None
@@ -60,6 +84,7 @@ class ReviewItem:
 
 
 def _require_reviewer(role: str) -> None:
+    """Raise ``NotAuthorized`` unless the role may curate (curator/admin)."""
     if role not in REVIEWER_ROLES:
         raise NotAuthorized(f"role {role!r} may not curate fixes; requires {REVIEWER_ROLES}")
 
@@ -67,6 +92,7 @@ def _require_reviewer(role: str) -> None:
 async def _top_manual_chunks(
     org_id: uuid.UUID, equipment_id: uuid.UUID, query: str
 ) -> list[dict]:
+    """Retrieve the most relevant *manual* excerpts for a fix, as review evidence."""
     results = await search(org_id, equipment_id, query)
     return [
         {"chunk_id": r.chunk_id, "page": r.page, "text": r.text, "score": r.score}
@@ -337,6 +363,11 @@ async def delete_fix(
 
 
 async def _load_for_transition(s, fix_id: uuid.UUID, dst: str) -> Fix:
+    """Load a fix and verify the ``current -> dst`` state change is legal.
+
+    Raises ``FixNotFound`` or ``IllegalTransition`` so every mutating action
+    shares one consistent guard.
+    """
     fix = await s.get(Fix, fix_id)
     if fix is None:
         raise FixNotFound(str(fix_id))
@@ -398,6 +429,7 @@ async def _resolve(
     dst: str,
     reason: str,
 ) -> None:
+    """Shared implementation for reject/unsafe: set the state and record the reason."""
     _require_reviewer(role)
     org_id = uuid.UUID(str(org_id))
     async with session_for_org(org_id) as s:

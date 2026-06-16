@@ -1,3 +1,12 @@
+"""Lookup/bootstrap helpers used by ingestion, CLIs, and seeding.
+
+These functions answer "find this org/equipment, creating it if needed" and
+"what's the latest version of this document?". Org creation is special: it
+happens *before* any tenant exists, so — unlike normal app code — it connects on
+the owner role (``database_url``) rather than the RLS-restricted app role. The
+equipment/document helpers run inside a caller-provided tenant session.
+"""
+
 import uuid
 
 from sqlalchemy import select
@@ -9,6 +18,7 @@ from fixmate.core.settings import settings
 
 
 async def get_or_create_org(name: str) -> uuid.UUID:
+    """Return the id of the org with this name, creating it if absent (bootstrap)."""
     # Org creation is a bootstrap operation outside any tenant context, so it
     # runs on the owner connection (not fixmate_app) — mirrors tests/conftest.py.
     engine = create_async_engine(settings.database_url, poolclass=NullPool)
@@ -29,6 +39,7 @@ async def get_or_create_org(name: str) -> uuid.UUID:
 async def get_or_create_equipment(
     session: AsyncSession, org_id: uuid.UUID, name: str
 ) -> uuid.UUID:
+    """Return the id of the named equipment profile in this org, creating if absent."""
     eid = await session.scalar(
         select(EquipmentProfile.id).where(
             EquipmentProfile.organization_id == org_id, EquipmentProfile.name == name
@@ -45,6 +56,11 @@ async def get_or_create_equipment(
 async def latest_document(
     session: AsyncSession, org_id: uuid.UUID, equipment_id: uuid.UUID, title: str
 ) -> Document | None:
+    """Return the highest-version document for this (org, equipment, title), or None.
+
+    Used during ingestion to decide the next version number and which prior
+    document to mark superseded.
+    """
     return await session.scalar(
         select(Document)
         .where(

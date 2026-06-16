@@ -1,3 +1,13 @@
+/**
+ * The chat screen — the main Q&A interface for technicians.
+ *
+ * On mount it creates a conversation scoped to the chosen equipment. Asking a
+ * question optimistically appends a "turn" (the question with a null answer,
+ * shown as a typing indicator), calls the API, then fills in the answer — or
+ * removes the turn and shows an error if the call fails. Each answered turn
+ * renders either an <EscalationCard> (when the system declined to answer) or an
+ * <AnswerCard> with a <FeedbackBar>. Auto-scrolls to the newest turn.
+ */
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../api";
 import type { Answer, Equipment } from "../types";
@@ -6,6 +16,7 @@ import { EscalationCard } from "./EscalationCard";
 import { FeedbackBar } from "./FeedbackBar";
 import { Icon } from "./Icon";
 
+/** One question and its answer; ``answer`` is null while the request is in flight. */
 interface Turn {
   question: string;
   answer: Answer | null; // null while in flight
@@ -38,6 +49,8 @@ export function ChatView({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns]);
 
+  // Send a question: optimistically show it, await the answer, then fill it in
+  // (or roll back the turn and surface an error on failure).
   async function ask(text: string) {
     const q = text.trim();
     if (!q || !conversationId || pending) return;

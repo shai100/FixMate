@@ -1,9 +1,14 @@
+/**
+ * The Offline Packs screen — a Phase 2 preview, not yet functional.
+ *
+ * Offline packs will let technicians answer from cached manual sections and
+ * approved fixes with no signal, but there's no backend for them yet. This
+ * screen renders the planned design against the real equipment list and is
+ * clearly labelled "preview" so it never looks like a working feature.
+ */
 import type { Equipment } from "../../types";
 import { Icon } from "../Icon";
 
-// Offline packs are Phase 2 (no backend yet). This screen reproduces the
-// mockup's design against real equipment names and is explicitly labelled as a
-// preview so it never masquerades as a working feature.
 export function PacksScreen({
   equipment,
   onOpenSettings,

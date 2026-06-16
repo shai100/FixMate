@@ -1,10 +1,17 @@
+/**
+ * The visual shell for the technician app and its small chrome pieces.
+ *
+ * On a desktop browser the app is shown inside a mocked-up phone frame with an
+ * explanatory side panel (the "stage"); on a real phone the frame collapses and
+ * the app fills the screen — the actual PWA presentation. This file exports the
+ * reusable layout/chrome bits used across technician screens: <PhoneShell> (the
+ * frame), <TabBar> (bottom navigation), <Toast> (transient notifications), plus
+ * the faux status bar.
+ */
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 
-// Phone-frame shell ported from app/index.html: a desktop "stage" with a
-// companion info panel and a device frame; on narrow viewports the frame
-// collapses and the app fills the screen (the real PWA presentation).
-
+/** Faux iOS-style status bar showing a live clock and signal/battery glyphs. */
 function StatusBar() {
   const [time, setTime] = useState(formatNow);
   useEffect(() => {
@@ -31,6 +38,7 @@ function StatusBar() {
   );
 }
 
+/** Current time as a "H:MM" string for the status bar clock. */
 function formatNow(): string {
   const d = new Date();
   return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -51,6 +59,8 @@ const TIPS = [
   </>,
 ];
 
+/** Wraps the app in the desktop stage + phone frame; renders ``children`` as the
+ *  phone's screen content. */
 export function PhoneShell({ children }: { children: ReactNode }) {
   return (
     <div className="stage">
@@ -90,6 +100,7 @@ export function PhoneShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** One bottom-navigation tab: its id, icon, label, and optional numeric badge. */
 export interface TabDef {
   id: string;
   icon: IconName;
@@ -97,6 +108,8 @@ export interface TabDef {
   badge?: number;
 }
 
+/** Bottom navigation bar; highlights the ``active`` tab and calls ``onSelect``
+ *  with the tapped tab's id. */
 export function TabBar({
   tabs,
   active,
@@ -125,11 +138,13 @@ export function TabBar({
   );
 }
 
+/** A transient toast notification: the message and whether it's success or info. */
 export interface ToastState {
   message: string;
   kind: "ok" | "info";
 }
 
+/** Renders the toast (slides in when ``toast`` is set, hidden when null). */
 export function Toast({ toast }: { toast: ToastState | null }) {
   return (
     <div className="toastWrap">

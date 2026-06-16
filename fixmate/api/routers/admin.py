@@ -1,3 +1,12 @@
+"""Admin-only user and role management (FR-14).
+
+Lets an organization's admin list, create, update, delete users and change their
+roles. Every action is admin-gated (``require_role("admin")``) and audited.
+Because role assignment controls who may curate fixes, these endpoints are a
+sensitive part of the trust model — hence the strict gating and the
+self-deletion guard.
+"""
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,6 +24,7 @@ from fixmate.core.models import AuditEvent, User
 
 
 def _user_out(u: User) -> UserOut:
+    """Convert a ``User`` ORM row into its API response model."""
     return UserOut(id=u.id, name=u.name, email=u.email, role=u.role, created_at=u.created_at)
 
 # User/role management is admin-only (FR-14): only an admin may change who can
@@ -26,6 +36,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 @router.get("/users", response_model=list[UserOut])
 async def list_users(auth: AuthContext = Depends(admin_only)) -> list[UserOut]:
+    """List all users in the admin's organization, oldest first."""
     async with session_for_org(auth.org_id) as s:
         rows = (
             (await s.execute(select(User).order_by(User.created_at))).scalars().all()
@@ -38,6 +49,7 @@ async def create_user(
     body: CreateUserRequest,
     auth: AuthContext = Depends(admin_only),
 ) -> UserOut:
+    """Create a user in the admin's org with a valid role (201, audited)."""
     if body.role not in ROLES:
         raise HTTPException(status_code=422, detail=f"role must be one of {ROLES}")
     if not body.name.strip():
@@ -72,6 +84,7 @@ async def update_user(
     body: UpdateUserRequest,
     auth: AuthContext = Depends(admin_only),
 ) -> UserOut:
+    """Partially update a user's name/email/role (audited; 404 if not found)."""
     if body.role is not None and body.role not in ROLES:
         raise HTTPException(status_code=422, detail=f"role must be one of {ROLES}")
     async with session_for_org(auth.org_id) as s:
@@ -107,6 +120,7 @@ async def delete_user(
     user_id: uuid.UUID,
     auth: AuthContext = Depends(admin_only),
 ) -> None:
+    """Delete a user (204, audited). Refuses self-deletion to avoid orphaning the org."""
     # An admin deleting themselves would lock the tenant out of user management;
     # reject it rather than risk an orphaned org.
     if user_id == auth.user_id:
@@ -136,6 +150,8 @@ async def set_user_role(
     body: SetRoleRequest,
     auth: AuthContext = Depends(admin_only),
 ) -> UserOut:
+    """Set a user's role (audited). A dedicated endpoint for the common case of
+    promoting/demoting a single user."""
     if body.role not in ROLES:
         raise HTTPException(status_code=422, detail=f"role must be one of {ROLES}")
     async with session_for_org(auth.org_id) as s:

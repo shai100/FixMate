@@ -1,3 +1,10 @@
+"""Command-line tool to compose a single answer end-to-end (for manual testing).
+
+Run e.g. ``python -m fixmate.answers.cli "why is pump X leaking?" --org "FixMate
+Demo"`` to exercise the full RAG pipeline from a terminal and print the answer,
+its confidence, citations, and figures — handy for debugging without the web UI.
+"""
+
 import argparse
 import asyncio
 
@@ -7,6 +14,7 @@ from fixmate.ingestion import registry
 
 
 async def _run(question: str, org_name: str, equipment_name: str | None) -> None:
+    """Resolve the org/equipment, compose an answer, and print it to stdout."""
     org_id = await registry.get_or_create_org(org_name)
 
     equipment_id = None
@@ -32,6 +40,7 @@ async def _run(question: str, org_name: str, equipment_name: str | None) -> None
 
 
 def main() -> None:
+    """Parse CLI arguments and run the answer composition."""
     parser = argparse.ArgumentParser(description="Compose a grounded, cited answer.")
     parser.add_argument("question")
     parser.add_argument("--org", required=True, help="organization name")

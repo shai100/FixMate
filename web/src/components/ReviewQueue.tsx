@@ -1,11 +1,17 @@
+/**
+ * The review queue — the entry point to FixMate's curation workflow (the moat).
+ *
+ * Lists every fix awaiting human review with a count badge and per-item risk
+ * chip from the AI pre-screen. Selecting one opens the <ReviewDetail> view to
+ * act on it; when an action resolves the fix, the queue reloads. Reloads are
+ * triggered by bumping a `revision` counter (rather than calling setState inside
+ * an effect), which the load effect depends on.
+ */
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import type { ReviewItem } from "../types";
 import { ReviewDetail } from "./ReviewDetail";
 
-// The curation queue is the moat (CLAUDE.md §2.4/§2.5). It lists every fix
-// awaiting human review with a badge count, and opens a side-by-side detail
-// view where a curator approves, edits, rejects, or flags it unsafe (FR-14/15/16).
 export function ReviewQueue() {
   const [items, setItems] = useState<ReviewItem[] | null>(null);
   const [selected, setSelected] = useState<ReviewItem | null>(null);

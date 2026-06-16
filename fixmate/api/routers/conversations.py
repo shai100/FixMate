@@ -1,3 +1,10 @@
+"""CRUD for conversations — the containers that group a Q&A session's messages.
+
+Exposes creating a conversation (optionally pinned to equipment) and fetching one
+with its full message history. The actual asking happens in ``ask.py``; this
+router just manages the conversation shell.
+"""
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,6 +23,7 @@ async def create_conversation(
     body: CreateConversation,
     auth: AuthContext = Depends(get_current_user),
 ) -> ConversationOut:
+    """Create a new, empty conversation owned by the caller (returns 201)."""
     async with session_for_org(auth.org_id) as s:
         conv = Conversation(
             organization_id=auth.org_id,
@@ -34,6 +42,7 @@ async def get_conversation(
     conversation_id: uuid.UUID,
     auth: AuthContext = Depends(get_current_user),
 ) -> ConversationOut:
+    """Fetch one conversation and its messages, ordered oldest-first (404 if not found)."""
     async with session_for_org(auth.org_id) as s:
         # RLS scopes the lookup to the tenant: another org's conversation is
         # simply invisible here, so a cross-tenant fetch 404s (Phase 6.2 test).

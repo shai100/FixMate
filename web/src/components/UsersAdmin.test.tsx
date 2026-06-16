@@ -1,3 +1,9 @@
+/**
+ * Tests for <UsersAdmin> (admin user management, FR-14).
+ *
+ * They verify the user list renders and that changing a role calls the API. The
+ * `api` module is mocked so list/role calls are controlled and assertable.
+ */
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";

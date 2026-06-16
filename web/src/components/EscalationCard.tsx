@@ -1,10 +1,15 @@
+/**
+ * The card shown when the system declines to answer (FR-4).
+ *
+ * When confidence is too low or the answer couldn't be grounded, the backend
+ * sets `escalated=true` and replaces the body with an honest "I don't know"
+ * message. This card renders that plainly — it deliberately does NOT look like a
+ * confident answer. It shows the nearest matching sections (so the technician has
+ * a starting point) and an explicit "escalate to a senior technician" action.
+ */
 import type { Answer } from "../types";
 import { Icon } from "./Icon";
 
-// Low-confidence path (FR-4): the composer replaces the answer body with a
-// "don't know" response and sets escalated=true. We never dress this up as a
-// confident answer — we show the nearest sections (citations) and an explicit
-// escalate action.
 export function EscalationCard({
   answer,
   onEscalate,

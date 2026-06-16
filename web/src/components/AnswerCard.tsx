@@ -1,3 +1,15 @@
+/**
+ * Renders a confident, grounded answer (the non-escalated case).
+ *
+ * It does three notable things beyond plain display:
+ *   1. Pulls any safety-warning lines out of the answer body and shows them in a
+ *      dedicated alert block ABOVE everything — warnings-first is a hard
+ *      requirement (a wrong step can hurt someone).
+ *   2. Badges the answer with its confidence level and, if any source is a
+ *      human-approved field fix, a "Field-verified" chip.
+ *   3. Lists figures and clickable source citations (manual vs. field fix).
+ * `children` (e.g. the <FeedbackBar>) renders at the bottom of the card.
+ */
 import type { Answer, Citation, Confidence } from "../types";
 import { Icon, type IconName } from "./Icon";
 
@@ -12,11 +24,13 @@ const CONFIDENCE: Record<Confidence, { label: string; icon: IconName }> = {
   low: { label: "Low confidence", icon: "alert" },
 };
 
+/** The answer body split into safety ``warnings`` and the ``rest`` of the lines. */
 interface ParsedBody {
   warnings: string[];
   rest: string[];
 }
 
+/** Separate safety-warning lines (matched by ``SAFETY_PREFIX``) from body lines. */
 function parseBody(text: string): ParsedBody {
   const warnings: string[] = [];
   const rest: string[] = [];
@@ -31,6 +45,7 @@ function parseBody(text: string): ParsedBody {
   return { warnings, rest };
 }
 
+/** One source list item, badged as either a manual page or a field fix. */
 function CitationLink({ citation }: { citation: Citation }) {
   const label =
     (citation.document_title ?? "Source") +

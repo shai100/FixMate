@@ -1,10 +1,15 @@
+/**
+ * The technician Settings screen.
+ *
+ * Text size is a real control: it scales the root font size (so the whole UI
+ * grows for glove/low-light use, which the layout supports up to 130%). The
+ * voice-input and notification toggles are cosmetic placeholders until those
+ * features ship. The Account section shows the role and a Sign out action.
+ */
 import { useState } from "react";
 import type { DevIdentity } from "../../auth";
 import { Icon } from "../Icon";
 
-// Settings. Text size is functional (scales the root rem unit, per the mockup's
-// "layout holds to 130%" glove/low-light requirement). Voice/notification
-// toggles are cosmetic placeholders until those features land.
 export function SettingsScreen({
   identity,
   onBack,
@@ -18,6 +23,8 @@ export function SettingsScreen({
   const [voice, setVoice] = useState(true);
   const [notif, setNotif] = useState(true);
 
+  // Apply the chosen text size by setting the root font-size; rem-based styles
+  // scale with it.
   function applyScale(v: number) {
     setScale(v);
     document.documentElement.style.fontSize = `${v}%`;

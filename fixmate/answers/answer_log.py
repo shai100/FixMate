@@ -1,3 +1,11 @@
+"""Writes the immutable audit record for every generated answer.
+
+A thin helper around inserting an ``AnswerLog`` row. It exists as its own module
+so the composer's many exit paths (escalation, abstention, grounded success) all
+log through one consistent function. See CLAUDE.md §8.2 for why every answer must
+be reconstructable later.
+"""
+
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession

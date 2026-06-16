@@ -1,3 +1,13 @@
+"""Builds a deterministic demo tenant used by evals and demo seeding.
+
+Both the eval runner and ``scripts/seed_demo.py`` need a known, repeatable
+dataset: one equipment profile, a small manual with specific anchors (error code
+E47, torque 12 Nm, pressure 2 bar, part AB-1234, LOTO steps), three users, and
+one approved field fix. The manual text is crafted so the eval cases can assert
+groundedness against it, so do not change those anchor strings casually. The
+builder is idempotent — re-running reuses existing rows so chunk ids stay stable.
+"""
+
 import tempfile
 import uuid
 from dataclasses import dataclass
@@ -49,6 +59,9 @@ DEMO_FIX_TEXT = (
 
 @dataclass
 class DemoTenant:
+    """Handles to the key rows of a built demo tenant (ids for org, equipment,
+    the three users, the ingested manual, and the approved fix)."""
+
     org_id: uuid.UUID
     equipment_id: uuid.UUID
     admin_id: uuid.UUID
@@ -59,6 +72,7 @@ class DemoTenant:
 
 
 def build_demo_pdf(path: Path) -> Path:
+    """Write the demo manual (text pages + one image on page 2) to ``path``."""
     doc = fitz.open()
     for page_no in sorted(DEMO_MANUAL_PAGES):
         page = doc.new_page()
@@ -73,6 +87,7 @@ def build_demo_pdf(path: Path) -> Path:
 
 
 async def _get_or_create_user(s, org_id: uuid.UUID, name: str, role: str) -> uuid.UUID:
+    """Return the id of the named user in this org, creating with ``role`` if absent."""
     uid = await s.scalar(select(User.id).where(User.organization_id == org_id, User.name == name))
     if uid:
         return uid

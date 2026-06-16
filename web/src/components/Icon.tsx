@@ -1,7 +1,13 @@
-// Inline icon set ported from app/index.html (Lucide-style strokes). Keeping the
-// SVGs inline (rather than pulling an icon dependency) matches the mockup and
-// keeps the offline PWA bundle small.
+/**
+ * A small inline SVG icon set (Lucide-style strokes).
+ *
+ * Rather than pull in an icon library, the SVG path data lives inline in this
+ * file. That keeps the offline PWA bundle small and matches the design mockup.
+ * Use it as `<Icon name="wrench" />`; `IconName` is the union of available names
+ * (so a typo is a compile error) and `PATHS` maps each name to its SVG markup.
+ */
 
+/** Every icon available to the `<Icon>` component. */
 export type IconName =
   | "wrench"
   | "settings"
@@ -71,6 +77,8 @@ const PATHS: Record<IconName, string> = {
     '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>',
 };
 
+/** Render a named icon as an inline SVG at the given pixel ``size``. Inherits the
+ *  current text color via ``stroke="currentColor"``. */
 export function Icon({
   name,
   size = 18,

@@ -1,11 +1,16 @@
 /// <reference types="vitest/config" />
+// Vite build/dev configuration for the web client.
+//
+// Three responsibilities: (1) the React plugin compiles JSX/TSX; (2) the PWA
+// plugin makes the app installable and caches the app *shell* for offline load
+// (answers are deliberately never cached — they need a live, grounded API call);
+// (3) the dev server proxies API paths to the FastAPI backend on :8000 so the
+// frontend and API look same-origin in development, keeping auth and CORS simple.
+// The `test` block configures Vitest (jsdom environment + the global setup file).
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-// Dev proxy sends API calls to the FastAPI app (Phase 6). The technician PWA
-// and the API are same-origin in production; in dev we proxy to :8000 so the
-// dev-auth headers and CORS stay simple.
 export default defineConfig({
   plugins: [
     react(),

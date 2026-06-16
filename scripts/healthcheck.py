@@ -1,3 +1,12 @@
+"""Connectivity smoke test for the local backing services.
+
+Run ``python scripts/healthcheck.py`` after ``docker compose up`` to confirm the
+four dependencies FixMate needs are reachable: Postgres, Redis, MinIO (S3), and
+Ollama. It also checks that the required Ollama models are pulled, printing a
+``MISSING`` hint with the exact ``ollama pull`` command if not. Prints a line per
+service; intended as a quick "is my environment up?" check, not a test suite.
+"""
+
 import asyncio
 
 import asyncpg
@@ -9,6 +18,7 @@ from fixmate.core.settings import settings
 
 
 async def main() -> None:
+    """Ping each backing service in turn and print its status to stdout."""
     conn = await asyncpg.connect(settings.database_url.replace("+asyncpg", ""))
     print("postgres OK", await conn.fetchval("select version()"))
     await conn.close()

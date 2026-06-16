@@ -1,3 +1,12 @@
+"""Technician feedback on answers ("did it help?").
+
+A single endpoint records a thumbs up/down on an assistant message. A negative
+verdict can carry a proposed fix (text + photos), which the service layer turns
+into a candidate ``Fix`` for curation. The heavy lifting lives in
+``fixmate/feedback/service.py``; this router just maps its exceptions to HTTP
+status codes.
+"""
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,6 +28,12 @@ async def submit_feedback(
     body: FeedbackRequest,
     auth: AuthContext = Depends(get_current_user),
 ) -> FeedbackOut:
+    """Record feedback on an answer; optionally open a candidate fix (returns 201).
+
+    Maps service errors to HTTP: a missing message -> 404, and a proposed fix
+    submitted on a conversation with no equipment -> 422 (a fix must be tied to a
+    piece of equipment).
+    """
     try:
         result = await record_feedback(
             auth.org_id,

@@ -1,3 +1,10 @@
+"""Command-line tool to ingest a PDF manual for a tenant.
+
+Run it inline (does the work in-process and prints chunk/figure counts) or with
+``--async`` to enqueue the Celery task instead. Example: ``python -m
+fixmate.ingestion.cli manual.pdf --org "FixMate Demo" --equipment "Pump X"``.
+"""
+
 import argparse
 import asyncio
 
@@ -10,6 +17,7 @@ from fixmate.ingestion.pipeline import ingest_document
 
 
 async def _run(pdf_path: str, org_name: str, equipment_name: str, run_async: bool) -> None:
+    """Resolve org/equipment, then ingest the PDF (inline or via Celery)."""
     org_id = await registry.get_or_create_org(org_name)
     async with session_for_org(org_id) as s:
         equipment_id = await registry.get_or_create_equipment(s, org_id, equipment_name)
@@ -35,6 +43,7 @@ async def _run(pdf_path: str, org_name: str, equipment_name: str, run_async: boo
 
 
 def main() -> None:
+    """Parse CLI arguments and run ingestion."""
     parser = argparse.ArgumentParser(description="Ingest a PDF manual for a tenant.")
     parser.add_argument("pdf_path")
     parser.add_argument("--org", required=True, help="organization name (created if missing)")

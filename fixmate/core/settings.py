@@ -1,7 +1,42 @@
+"""Central application configuration.
+
+This module defines every tunable knob FixMate reads at startup — database
+URLs, the LLM backend to use, object-storage credentials, and auth settings.
+Values come from (in order of precedence) real environment variables, then a
+local ``.env`` file, then the hard-coded defaults below. Those defaults are
+deliberately wired for the local Docker Compose stack (see
+``docker-compose.yml`` / ``setup-instructions.md``) so a fresh clone runs
+without any configuration.
+
+Everything else in the codebase imports the single shared ``settings`` instance
+created at the bottom of this file rather than reading ``os.environ`` directly,
+so there is exactly one place that defines what is configurable.
+"""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """Typed, validated configuration loaded once at import time.
+
+    Subclassing pydantic's ``BaseSettings`` means each attribute below is read
+    from the matching environment variable (case-insensitive, e.g.
+    ``DATABASE_URL`` -> ``database_url``) and coerced to the annotated type, so a
+    misconfigured value fails loudly at boot instead of deep inside a request.
+
+    Attribute groups:
+      - ``database_*``: Postgres connection strings. ``database_url`` is the
+        owner/superuser used for migrations; ``database_app_url`` is the limited
+        role the app runs queries as so Row-Level Security actually applies.
+      - ``redis_url``: Celery broker / result backend for async workers.
+      - ``s3_*``: MinIO (local) or S3 (cloud) object storage for PDFs/figures.
+      - ``llm_provider`` + ``ollama_*`` / ``anthropic_*``: which LLM backend to
+        use and how to reach it (see ``fixmate/llm/factory.py``).
+      - ``dev_auth`` / ``dev_auto_login`` / ``env``: local-only auth shortcuts,
+        guarded so they can never be enabled in a real deployment.
+      - ``keycloak_*`` / ``oidc_*``: production OIDC token validation (Phase 9).
+    """
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     database_url: str = "postgresql+asyncpg://fixmate:fixmate@localhost:5432/fixmate"
@@ -39,4 +74,5 @@ class Settings(BaseSettings):
     oidc_verify_audience: bool = False
 
 
+# The one shared, process-wide configuration object. Import this, not the class.
 settings = Settings()

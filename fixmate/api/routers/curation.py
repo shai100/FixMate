@@ -1,3 +1,14 @@
+"""The fix-curation HTTP surface — the workflow that powers FixMate's moat.
+
+Curators and admins use these endpoints to review technician-proposed fixes and
+move them through their lifecycle (approve / reject / flag unsafe / retire), plus
+author, edit, and delete fixes directly. Every endpoint is guarded by the
+``reviewer`` role dependency, and the underlying service
+(``fixmate/curation/service.py``) guards again — defense in depth. This module
+holds two routers: ``/curation/*`` for read-side queue/list views and
+``/fixes/*`` for the mutating actions.
+"""
+
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -36,6 +47,7 @@ fixes_router = APIRouter(prefix="/fixes", tags=["curation"])
 
 @queue_router.get("/queue", response_model=list[ReviewItemOut])
 async def get_queue(auth: AuthContext = Depends(reviewer)) -> list[ReviewItemOut]:
+    """List fixes awaiting review, each bundled with the evidence a curator needs."""
     items = await review_queue(auth.org_id)
     return [
         ReviewItemOut(
@@ -59,6 +71,11 @@ async def get_all_fixes(
     state: str | None = None,
     auth: AuthContext = Depends(reviewer),
 ) -> list[FixSummaryOut]:
+    """List all fixes with full lifecycle metadata for the admin table.
+
+    ``state`` is an optional comma-separated filter (e.g. ``"approved,retired"``);
+    omit it to return every state.
+    """
     states = tuple(state.split(",")) if state else None
     items = await list_fixes(auth.org_id, states)
     return [
@@ -82,6 +99,11 @@ async def get_all_fixes(
 
 
 def _map_errors(exc: Exception) -> HTTPException:
+    """Translate curation service exceptions into HTTP responses.
+
+    ``FixNotFound`` -> 404, ``IllegalTransition`` (e.g. approving an already-retired
+    fix) -> 409. Anything else is re-raised unchanged.
+    """
     if isinstance(exc, FixNotFound):
         return HTTPException(status_code=404, detail="fix not found")
     if isinstance(exc, IllegalTransition):
@@ -95,6 +117,11 @@ async def approve_fix(
     body: ApproveRequest | None = None,
     auth: AuthContext = Depends(reviewer),
 ) -> None:
+    """Approve a fix, optionally with edited text, indexing it for retrieval (204).
+
+    Approval is the moment a candidate fix becomes a searchable, badge-verified
+    field fix. ``edited_text`` lets the curator approve a revised version.
+    """
     try:
         await approve(
             auth.org_id,
@@ -113,6 +140,7 @@ async def reject_fix(
     body: ResolveRequest,
     auth: AuthContext = Depends(reviewer),
 ) -> None:
+    """Reject a fix with a recorded reason (204). It is never served to technicians."""
     try:
         await reject(auth.org_id, fix_id, auth.user_id, auth.role, body.reason)
     except (FixNotFound, IllegalTransition) as exc:
@@ -125,6 +153,7 @@ async def unsafe_fix(
     body: ResolveRequest,
     auth: AuthContext = Depends(reviewer),
 ) -> None:
+    """Flag a fix as unsafe with a recorded reason (204) — a stronger signal than reject."""
     try:
         await flag_unsafe(auth.org_id, fix_id, auth.user_id, auth.role, body.reason)
     except (FixNotFound, IllegalTransition) as exc:
@@ -137,6 +166,7 @@ async def retire_fix(
     body: ResolveRequest,
     auth: AuthContext = Depends(reviewer),
 ) -> None:
+    """Retire a previously-approved fix (204), removing it from retrieval immediately."""
     try:
         await retire(auth.org_id, fix_id, auth.user_id, auth.role, body.reason)
     except (FixNotFound, IllegalTransition) as exc:
@@ -148,6 +178,7 @@ async def create_new_fix(
     body: CreateFixRequest,
     auth: AuthContext = Depends(reviewer),
 ) -> dict:
+    """Author a new fix directly (curator/admin), bypassing technician feedback (201)."""
     try:
         fix_id = await create_fix(
             auth.org_id,
@@ -168,6 +199,7 @@ async def edit_fix(
     body: UpdateFixRequest,
     auth: AuthContext = Depends(reviewer),
 ) -> None:
+    """Edit a fix's proposed text and/or question before approval (204)."""
     try:
         await update_fix(
             auth.org_id,
@@ -188,6 +220,8 @@ async def remove_fix(
     fix_id: uuid.UUID,
     auth: AuthContext = Depends(reviewer),
 ) -> None:
+    """Permanently delete a fix (204). Prefer retire for approved fixes; this is
+    for cleaning up never-approved drafts."""
     try:
         await delete_fix(auth.org_id, fix_id, auth.user_id, auth.role)
     except FixNotFound as exc:

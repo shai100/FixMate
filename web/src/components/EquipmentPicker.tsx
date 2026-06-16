@@ -1,10 +1,16 @@
+/**
+ * The equipment-selection screen — the first step of the technician flow (FR-10).
+ *
+ * Picking a piece of equipment scopes the upcoming conversation to its manuals
+ * and approved fixes (retrieval filters by `equipment_id`), or "General" for no
+ * scope. The list is provided by the parent (loaded once in <App>) and filtered
+ * locally by a search box over name/manufacturer/model. Selecting an item calls
+ * `onSelect`, which moves the app to the chat screen.
+ */
 import { useMemo, useState } from "react";
 import type { Equipment } from "../types";
 import { Icon } from "./Icon";
 
-// Equipment profile selection (FR-10). A conversation is scoped to one piece of
-// equipment so retrieval can filter by equipment_id. Equipment is loaded once
-// in App and passed down so the Packs screen can reuse it.
 export function EquipmentPicker({
   equipment,
   loading,

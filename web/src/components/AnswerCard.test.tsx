@@ -1,8 +1,18 @@
+/**
+ * Tests for <AnswerCard>'s safety-critical rendering rules.
+ *
+ * These verify the behaviors that matter for trust: safety warnings render first
+ * (above the body), the confidence chip and field-fix badge show correctly, and
+ * figures/citations appear. They render the component with React Testing Library
+ * and assert against the resulting DOM. `makeAnswer` is a factory that builds a
+ * valid `Answer` so each test only specifies the fields it cares about.
+ */
 import { render, screen, within } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { AnswerCard } from "./AnswerCard";
 import type { Answer } from "../types";
 
+/** Build a complete `Answer` for tests, overriding only the fields under test. */
 function makeAnswer(overrides: Partial<Answer> = {}): Answer {
   return {
     message_id: "m1",

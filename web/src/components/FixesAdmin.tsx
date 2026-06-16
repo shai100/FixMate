@@ -1,7 +1,21 @@
+/**
+ * The "All fixes" admin table — the full fix catalogue and audit view (FR-15/16).
+ *
+ * Shows every fix in every lifecycle state with its creator, dates, and approval
+ * status. From here a curator/admin can author a new fix (`NewFixForm`), edit a
+ * fix's text (`FixRow`), or delete one. Note: approve/reject still happen through
+ * the Review queue (which carries the AI pre-screen) — this table is for
+ * management and auditing, not the safety-gated approval step.
+ *
+ * This file exports the table plus two private sub-components: `FixRow` (one row,
+ * with inline edit/delete) and `NewFixForm` (the create form). Like the other
+ * admin screens, it reloads its data by bumping a `revision` counter.
+ */
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import type { Equipment, FixSummary } from "../types";
 
+/** Format an ISO timestamp as a short localized date (e.g. "Jun 16, 2026"). */
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     year: "numeric",
@@ -10,10 +24,6 @@ function fmtDate(iso: string): string {
   });
 }
 
-// All-fixes admin (FR-15/16): the full fix catalogue across every lifecycle
-// state with date, creator and approval status. Curators/admins can open a new
-// issue, edit text, or delete. Approve/reject still flow through the review queue
-// (which carries the AI pre-screen); this is the management/audit table.
 export function FixesAdmin() {
   const [fixes, setFixes] = useState<FixSummary[] | null>(null);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -85,6 +95,7 @@ export function FixesAdmin() {
   );
 }
 
+/** One row of the fixes table; toggles into an inline editor and can delete the fix. */
 function FixRow({
   fix,
   onChanged,
@@ -171,6 +182,7 @@ function FixRow({
   );
 }
 
+/** The "New issue" form that authors a fix straight into the review queue. */
 function NewFixForm({
   equipment,
   onCancel,

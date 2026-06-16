@@ -1,3 +1,9 @@
+"""Command-line tool to run hybrid retrieval and print the ranked results.
+
+Useful for debugging retrieval in isolation (without the LLM). Example:
+``python -m fixmate.retrieval.cli "E47 error" --org "FixMate Demo" --top-k 5``.
+"""
+
 import argparse
 import asyncio
 
@@ -6,6 +12,7 @@ from fixmate.retrieval.service import search
 
 
 async def _run(query: str, org_name: str, equipment_name: str | None, top_k: int) -> None:
+    """Resolve org/equipment, run ``search``, and print a scored result table."""
     org_id = await registry.get_or_create_org(org_name)
 
     equipment_id = None
@@ -30,6 +37,7 @@ async def _run(query: str, org_name: str, equipment_name: str | None, top_k: int
 
 
 def main() -> None:
+    """Parse CLI arguments and run retrieval."""
     parser = argparse.ArgumentParser(description="Hybrid retrieval over a tenant's index.")
     parser.add_argument("query")
     parser.add_argument("--org", required=True, help="organization name")

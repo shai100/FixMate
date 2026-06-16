@@ -33,6 +33,7 @@ TEST_USERS = [
 
 
 def _admin_token(c: httpx.Client) -> str:
+    """Log in to Keycloak's master realm and return an admin access token."""
     r = c.post(
         f"{BASE}/realms/master/protocol/openid-connect/token",
         data={
@@ -47,6 +48,7 @@ def _admin_token(c: httpx.Client) -> str:
 
 
 def _ensure_realm(c: httpx.Client) -> None:
+    """Create the ``fixmate`` realm if it doesn't already exist."""
     if c.get(f"{BASE}/admin/realms/{REALM}").status_code == 200:
         print(f"realm {REALM!r} exists")
         return
@@ -55,6 +57,7 @@ def _ensure_realm(c: httpx.Client) -> None:
 
 
 def _enable_unmanaged_attributes(c: httpx.Client) -> None:
+    """Allow custom user attributes (needed so ``organization_id`` reaches tokens)."""
     # Keycloak 26 drops user attributes not declared in the user profile unless the
     # realm opts into unmanaged attributes — without this, organization_id is lost
     # and never reaches the access token.
@@ -69,6 +72,10 @@ def _enable_unmanaged_attributes(c: httpx.Client) -> None:
 
 
 def _ensure_client(c: httpx.Client) -> str:
+    """Create (or find) the ``fixmate-api`` OIDC client and its org-id mapper.
+
+    Returns the client's internal UUID.
+    """
     existing = c.get(f"{BASE}/admin/realms/{REALM}/clients", params={"clientId": CLIENT_ID}).json()
     if existing:
         cid = existing[0]["id"]
@@ -95,6 +102,7 @@ def _ensure_client(c: httpx.Client) -> str:
 
 
 def _ensure_org_mapper(c: httpx.Client, client_uuid: str) -> None:
+    """Add the mapper that copies the ``organization_id`` user attribute into tokens."""
     mappers = c.get(
         f"{BASE}/admin/realms/{REALM}/clients/{client_uuid}/protocol-mappers/models"
     ).json()
@@ -121,6 +129,7 @@ def _ensure_org_mapper(c: httpx.Client, client_uuid: str) -> None:
 
 
 def _ensure_roles(c: httpx.Client) -> None:
+    """Create the tech/curator/admin realm roles if missing."""
     for role in ("tech", "curator", "admin"):
         if c.get(f"{BASE}/admin/realms/{REALM}/roles/{role}").status_code == 200:
             continue
@@ -129,6 +138,7 @@ def _ensure_roles(c: httpx.Client) -> None:
 
 
 def _ensure_user(c: httpx.Client, email: str, role: str, password: str) -> None:
+    """Create/update a test user with the given role, password, and demo org id."""
     # firstName/lastName + empty requiredActions are needed or Keycloak 26's
     # "Verify Profile" action rejects the password grant with "not fully set up".
     body = {
@@ -167,6 +177,7 @@ def _ensure_user(c: httpx.Client, email: str, role: str, password: str) -> None:
 
 
 def main() -> None:
+    """Run the full idempotent bootstrap: realm, client, roles, and test users."""
     uuid.UUID(DEMO_ORG_ID)  # fail fast if the constant is malformed
     with httpx.Client(timeout=15) as c:
         token = _admin_token(c)

@@ -1,3 +1,11 @@
+/**
+ * The desktop curator/admin console — the shell for everything reviewers do.
+ *
+ * It's a tabbed layout: Review queue, All fixes, Documents, Equipment, and (for
+ * admins only) Users. The tab list is filtered by role so curators never see the
+ * admin-only Users tab — a defense-in-depth UI guard on top of the backend's own
+ * role checks (FR-14). Each tab simply renders its corresponding admin component.
+ */
 import { useState } from "react";
 import type { DevIdentity } from "../auth";
 import { ReviewQueue } from "./ReviewQueue";
@@ -7,8 +15,10 @@ import { EquipmentAdmin } from "./EquipmentAdmin";
 import { UsersAdmin } from "./UsersAdmin";
 import { Icon } from "./Icon";
 
+/** The console's tab identifiers. */
 type Tab = "queue" | "fixes" | "documents" | "equipment" | "users";
 
+/** One console tab; ``adminOnly`` tabs are hidden from curators. */
 interface TabDef {
   id: Tab;
   label: string;
@@ -23,8 +33,6 @@ const TABS: TabDef[] = [
   { id: "users", label: "Users", adminOnly: true },
 ];
 
-// Curator/Admin console (Phase 11). Route guard by role: curators reach the
-// review queue + content admin; only admins see user/role management (FR-14).
 export function Console({
   role,
   onSignOut,

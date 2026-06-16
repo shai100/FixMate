@@ -1,12 +1,19 @@
+/**
+ * The Users admin screen — admin-only user and role management (FR-14).
+ *
+ * Add users, edit their name/email, change their role, and delete them; every
+ * change is audited server-side. Role assignment is the sensitive part:
+ * promoting a tech to curator is exactly what grants them access to the review
+ * queue. Updates are applied to the in-memory list optimistically. Exports the
+ * screen plus the `UserItem` row component.
+ */
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api";
 import type { UserRow } from "../types";
 
+/** The selectable roles, in increasing privilege order. */
 const ROLES: UserRow["role"][] = ["tech", "curator", "admin"];
 
-// Admin-only user management (FR-14): add, edit details, set role, delete.
-// Every change is audited server-side. Promoting a tech to curator is what lets
-// them into the review queue.
 export function UsersAdmin() {
   const [users, setUsers] = useState<UserRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +157,7 @@ export function UsersAdmin() {
   );
 }
 
+/** One editable user row (name, email, role) with save and delete actions. */
 function UserItem({
   user,
   busy,

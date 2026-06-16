@@ -20,6 +20,7 @@ DEMO_ORG = "FixMate Demo"
 
 
 async def _run() -> None:
+    """Build the demo tenant, then print its ids and chunk/figure counts."""
     print(f"Seeding demo tenant {DEMO_ORG!r}...")
     tenant = await build_demo_tenant(DEMO_ORG)
 
