@@ -144,6 +144,18 @@ When in doubt, ask: **"Could a wrong answer here hurt someone or break equipment
 - **Remove stale steps:** if a change makes an instruction obsolete, correct or delete it — never leave instructions that no longer match the code.
 - **Why:** a stale setup guide silently breaks onboarding and masquerades as ground truth. Treating it as a first-class artifact (like the build log, §4.7) keeps the "clone → live locally" path honest.
 
+### 4.9 Architecture Documentation Stays Current
+- **`docs/ARCHITECTURE.md` is the canonical developer guide** to the system's components, repository layout, data model, and how the pieces interact. It is the document a new engineer reads to understand how FixMate works end-to-end.
+- **Whenever a commit changes the architecture, update `docs/ARCHITECTURE.md` in that same commit.**
+- **Triggers that require an update:**
+  - New, removed, or renamed top-level package/module under `fixmate/` (or a meaningful shift in a component's responsibility).
+  - New or removed API router/endpoint, or a change to the request/response contract (`fixmate/api/routers`, `fixmate/api/schemas.py`).
+  - Data-model changes: new/removed/renamed tables or columns (`fixmate/core/models.py`, `db/migrations`).
+  - Changes to a core interaction or flow: the RAG answer pipeline, hybrid retrieval, ingestion, the approved-fix lifecycle/indexing, auth, or tenant isolation.
+  - New external dependency or stack component (datastore, broker, provider) in `docker-compose.yml` / `pyproject.toml`.
+- **Keep the diagrams and tables truthful:** if a change makes a component description, flow, or table row wrong, correct it — never leave a description that no longer matches the code.
+- **Why:** the architecture guide is the map of the system. A stale map is worse than none — it sends engineers down paths that no longer exist. Treating it as a first-class artifact (like the build log §4.7 and setup guide §4.8) keeps the system legible as it evolves.
+
 ---
 
 ## 5. Decision-Making Patterns
