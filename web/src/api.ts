@@ -154,10 +154,36 @@ export const api = {
     });
   },
 
+  updateEquipment(
+    equipmentId: string,
+    body: { name?: string; manufacturer?: string | null; model?: string | null },
+  ): Promise<Equipment> {
+    return request<Equipment>(`/equipment/${equipmentId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+
+  deleteEquipment(equipmentId: string): Promise<void> {
+    return requestVoid(`/equipment/${equipmentId}`, { method: "DELETE" });
+  },
+
   // --- Documents admin ---
 
-  listDocuments(): Promise<DocumentRow[]> {
-    return request<DocumentRow[]>("/documents");
+  listDocuments(equipmentId?: string): Promise<DocumentRow[]> {
+    const q = equipmentId ? `?equipment_id=${encodeURIComponent(equipmentId)}` : "";
+    return request<DocumentRow[]>(`/documents${q}`);
+  },
+
+  updateDocument(documentId: string, body: { title: string }): Promise<DocumentRow> {
+    return request<DocumentRow>(`/documents/${documentId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+
+  deleteDocument(documentId: string): Promise<void> {
+    return requestVoid(`/documents/${documentId}`, { method: "DELETE" });
   },
 
   uploadDocument(

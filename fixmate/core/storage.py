@@ -32,6 +32,15 @@ def put_object(org_id: uuid.UUID, key_suffix: str, data: bytes, content_type: st
     return key
 
 
+def delete_object(key: str) -> None:
+    # Best-effort removal: the DB row is the source of truth, so a missing or
+    # already-deleted object must not break the request (CLAUDE.md §2.4).
+    try:
+        _client.delete_object(Bucket=settings.s3_bucket, Key=key)
+    except ClientError:
+        pass
+
+
 def object_exists(key: str) -> bool:
     try:
         _client.head_object(Bucket=settings.s3_bucket, Key=key)

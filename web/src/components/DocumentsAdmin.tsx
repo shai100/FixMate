@@ -46,6 +46,7 @@ export function DocumentsAdmin() {
   }
 
   const live = new Set(docs?.filter((d) => d.superseded_by === null).map((d) => d.id));
+  const equipmentName = new Map(equipment.map((e) => [e.id, e.name]));
 
   return (
     <section className="console-section" aria-label="Documents admin">
@@ -81,17 +82,108 @@ export function DocumentsAdmin() {
       <h3>Version history</h3>
       <ul className="console-list" data-testid="doc-list">
         {docs?.map((d) => (
-          <li key={d.id}>
-            <strong>{d.title}</strong>
-            <span className="console-muted">v{d.version}</span>
-            {live.has(d.id) ? (
-              <span className="doc-badge doc-badge--live">live</span>
-            ) : (
-              <span className="doc-badge doc-badge--superseded">superseded</span>
-            )}
-          </li>
+          <DocRow
+            key={d.id}
+            doc={d}
+            equipmentName={equipmentName.get(d.equipment_id) ?? "—"}
+            live={live.has(d.id)}
+            onChanged={() => setRevision((r) => r + 1)}
+            onError={setError}
+          />
         ))}
       </ul>
+      {docs && docs.length === 0 && <p className="console-empty">No documents yet.</p>}
     </section>
+  );
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function DocRow({
+  doc,
+  equipmentName,
+  live,
+  onChanged,
+  onError,
+}: {
+  doc: DocumentRow;
+  equipmentName: string;
+  live: boolean;
+  onChanged: () => void;
+  onError: (msg: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(doc.title);
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    if (!title.trim() || busy) return;
+    setBusy(true);
+    onError(null);
+    try {
+      await api.updateDocument(doc.id, { title: title.trim() });
+      setEditing(false);
+      onChanged();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.detail : "Could not rename document");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (!confirm(`Delete "${doc.title}"? It is removed from retrieval immediately.`)) return;
+    setBusy(true);
+    onError(null);
+    try {
+      await api.deleteDocument(doc.id);
+      onChanged();
+    } catch (e) {
+      onError(e instanceof ApiError ? e.detail : "Could not delete document");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <li className="doc-row">
+      {editing ? (
+        <div className="row-gap">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label="Document title" />
+          <button type="button" className="btn" disabled={busy || !title.trim()} onClick={save}>
+            Save
+          </button>
+          <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => setEditing(false)}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <>
+          <strong>{doc.title}</strong>
+          <span className="console-muted">v{doc.version}</span>
+          {live ? (
+            <span className="doc-badge doc-badge--live">live</span>
+          ) : (
+            <span className="doc-badge doc-badge--superseded">superseded</span>
+          )}
+          <span className="console-muted">{equipmentName}</span>
+          <span className="console-muted">{fmtDate(doc.created_at)}</span>
+          <span className="row-gap">
+            <button type="button" className="btn btn--ghost" disabled={busy} onClick={() => setEditing(true)}>
+              Rename
+            </button>
+            <button type="button" className="btn btn--danger" disabled={busy} onClick={remove}>
+              Delete
+            </button>
+          </span>
+        </>
+      )}
+    </li>
   );
 }

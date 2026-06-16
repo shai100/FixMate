@@ -77,6 +77,16 @@ class EquipmentOut(BaseModel):
     created_at: datetime
 
 
+class UpdateEquipment(BaseModel):
+    name: str | None = None
+    manufacturer: str | None = None
+    model: str | None = None
+
+
+class UpdateDocument(BaseModel):
+    title: str | None = None
+
+
 class ManualChunkOut(BaseModel):
     chunk_id: str
     page: int | None

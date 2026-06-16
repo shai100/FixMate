@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 
 from fixmate.api.deps import AuthContext, get_current_user
-from fixmate.api.schemas import DocumentOut, DocumentStatus, UploadAccepted
+from fixmate.api.schemas import DocumentOut, DocumentStatus, UpdateDocument, UploadAccepted
+from fixmate.core import storage
 from fixmate.core.db import session_for_org
-from fixmate.core.models import Document
+from fixmate.core.models import AuditEvent, Document, Figure
 from fixmate.ingestion.tasks import ingest_document_task
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -54,16 +55,23 @@ async def upload_document(
 
 @router.get("", response_model=list[DocumentOut])
 async def list_documents(
+    equipment_id: str | None = None,
     auth: AuthContext = Depends(get_current_user),
 ) -> list[DocumentOut]:
     # Version list for the admin console (FR-9): newest first so the live
     # revision (superseded_by is null) surfaces above its superseded ancestors.
+    # `equipment_id` scopes the list to one profile's attached manuals.
+    eq_id = None
+    if equipment_id is not None:
+        try:
+            eq_id = uuid.UUID(equipment_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="equipment_id must be a UUID") from exc
     async with session_for_org(auth.org_id) as s:
-        rows = (
-            (await s.execute(select(Document).order_by(Document.created_at.desc())))
-            .scalars()
-            .all()
-        )
+        stmt = select(Document).order_by(Document.created_at.desc())
+        if eq_id is not None:
+            stmt = stmt.where(Document.equipment_id == eq_id)
+        rows = (await s.execute(stmt)).scalars().all()
         return [
             DocumentOut(
                 id=d.id,
@@ -75,6 +83,87 @@ async def list_documents(
             )
             for d in rows
         ]
+
+
+@router.patch("/{document_id}", response_model=DocumentOut)
+async def update_document(
+    document_id: uuid.UUID,
+    body: UpdateDocument,
+    auth: AuthContext = Depends(get_current_user),
+) -> DocumentOut:
+    # Set details (FR-8): the only mutable field on a document is its title;
+    # version lineage and storage key are immutable provenance.
+    async with session_for_org(auth.org_id) as s:
+        doc = await s.get(Document, document_id)
+        if doc is None:
+            raise HTTPException(status_code=404, detail="document not found")
+        if body.title is not None:
+            new_title = body.title.strip()
+            if not new_title:
+                raise HTTPException(status_code=422, detail="title must not be empty")
+            before = doc.title
+            doc.title = new_title
+            s.add(
+                AuditEvent(
+                    organization_id=auth.org_id,
+                    actor_id=auth.user_id,
+                    entity_type="document",
+                    entity_id=doc.id,
+                    action="edit",
+                    before={"title": before},
+                    after={"title": new_title},
+                )
+            )
+        await s.commit()
+        return DocumentOut(
+            id=doc.id,
+            equipment_id=doc.equipment_id,
+            title=doc.title,
+            version=doc.version,
+            superseded_by=doc.superseded_by,
+            created_at=doc.created_at,
+        )
+
+
+@router.delete("/{document_id}", status_code=204)
+async def delete_document(
+    document_id: uuid.UUID,
+    auth: AuthContext = Depends(get_current_user),
+) -> None:
+    # Remove a manual and everything indexed from it. Chunks and figures cascade
+    # on the document FK (ondelete=CASCADE), so deleting the row drops it from
+    # retrieval immediately — the index is the single source of truth (spec §2.4).
+    async with session_for_org(auth.org_id) as s:
+        doc = await s.get(Document, document_id)
+        if doc is None:
+            raise HTTPException(status_code=404, detail="document not found")
+        figure_keys = (
+            (
+                await s.execute(
+                    select(Figure.storage_key).where(Figure.document_id == doc.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        storage_key = doc.storage_key
+        s.add(
+            AuditEvent(
+                organization_id=auth.org_id,
+                actor_id=auth.user_id,
+                entity_type="document",
+                entity_id=doc.id,
+                action="delete",
+                before={"title": doc.title, "version": doc.version},
+                after=None,
+            )
+        )
+        await s.delete(doc)
+        await s.commit()
+    # Storage cleanup is best-effort and runs after the DB commit so a storage
+    # hiccup can never leave a half-deleted index behind.
+    for key in [storage_key, *figure_keys]:
+        storage.delete_object(key)
 
 
 @router.get("/{task_id}", response_model=DocumentStatus)

@@ -1,7 +1,7 @@
 import pytest
 
 from fixmate.core.db import session_for_org
-from fixmate.core.models import EquipmentProfile, User
+from fixmate.core.models import Document, EquipmentProfile, User
 from tests.api.conftest import auth_headers
 from tests.retrieval.conftest import sample_pdf  # noqa: F401
 
@@ -40,6 +40,53 @@ async def test_upload_enqueues_and_status_reports(client, org_user_equipment, sa
     status = await client.get(f"/documents/{task_id}", headers=headers)
     assert status.status_code == 200
     assert status.json()["status"] in ("pending", "queued", "started", "ingested")
+
+
+async def _make_document(org_a, eq_id, title="Manual") -> str:
+    async with session_for_org(org_a) as s:
+        doc = Document(
+            organization_id=org_a,
+            equipment_id=eq_id,
+            title=title,
+            storage_key=f"{org_a}/docs/{title}.pdf",
+        )
+        s.add(doc)
+        await s.commit()
+        return str(doc.id)
+
+
+async def test_list_documents_filtered_by_equipment(client, org_user_equipment):
+    org_a, user_id, eq_id = org_user_equipment
+    headers = auth_headers(org_a, user_id, role="admin")
+    doc_id = await _make_document(org_a, eq_id)
+
+    listed = await client.get(f"/documents?equipment_id={eq_id}", headers=headers)
+    assert listed.status_code == 200
+    assert [d["id"] for d in listed.json()] == [doc_id]
+
+
+async def test_update_document_title(client, org_user_equipment):
+    org_a, user_id, eq_id = org_user_equipment
+    headers = auth_headers(org_a, user_id, role="admin")
+    doc_id = await _make_document(org_a, eq_id, title="Old Title")
+
+    updated = await client.patch(
+        f"/documents/{doc_id}", json={"title": "New Title"}, headers=headers
+    )
+    assert updated.status_code == 200
+    assert updated.json()["title"] == "New Title"
+
+
+async def test_delete_document(client, org_user_equipment):
+    org_a, user_id, eq_id = org_user_equipment
+    headers = auth_headers(org_a, user_id, role="admin")
+    doc_id = await _make_document(org_a, eq_id)
+
+    deleted = await client.delete(f"/documents/{doc_id}", headers=headers)
+    assert deleted.status_code == 204
+
+    listed = await client.get("/documents", headers=headers)
+    assert doc_id not in [d["id"] for d in listed.json()]
 
 
 async def test_upload_rejects_non_pdf(client, org_user_equipment):

@@ -2,11 +2,12 @@ import pytest
 from sqlalchemy import select
 
 from fixmate.core.db import session_for_org
-from fixmate.core.models import AuditEvent, Chunk, Fix
+from fixmate.core.models import AuditEvent, Chunk, Fix, User
 from fixmate.curation.service import (
     IllegalTransition,
     NotAuthorized,
     approve,
+    create_fix,
     flag_unsafe,
     reject,
     retire,
@@ -75,6 +76,37 @@ async def test_edit_and_approve_persists_curator_text(curation_world):
             await s.execute(select(Chunk).where(Chunk.fix_id == w.fix_id))
         ).scalars().first()
         assert "AB-1234" in chunk.content
+
+
+async def test_admin_can_approve_fix_they_created(curation_world):
+    """An admin who opens a fix can approve it: curation authority is a role
+    check, never a self-approval block (the reviewer and submitter may be the
+    same person). Locks in issue #2."""
+    w = curation_world
+    async with session_for_org(w.org_id) as s:
+        admin = User(organization_id=w.org_id, name="Andy Admin", role="admin")
+        s.add(admin)
+        await s.flush()
+        admin_id = admin.id
+        await s.commit()
+
+    fix_id = await create_fix(
+        w.org_id,
+        w.equipment_id,
+        admin_id,
+        role="admin",
+        proposed_text="Replace the inlet gasket and re-seat the cover to clear the leak.",
+        question="Cover leaks after service",
+    )
+
+    # Same admin both submitted and approves — no block.
+    await approve(w.org_id, fix_id, admin_id, role="admin")
+
+    async with session_for_org(w.org_id) as s:
+        fix = await s.get(Fix, fix_id)
+        assert fix.state == "approved"
+        assert fix.submitted_by == admin_id
+        assert fix.reviewed_by == admin_id
 
 
 async def test_tech_cannot_approve(curation_world):
