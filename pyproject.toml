@@ -23,6 +23,7 @@ dependencies = [
     "pydantic-settings",
     "python-multipart",
     "pyjwt[crypto]",
+    "pyyaml",
 ]
 
 [project.optional-dependencies]

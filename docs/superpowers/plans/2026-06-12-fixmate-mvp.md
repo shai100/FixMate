@@ -35,7 +35,7 @@
 | 9 | Keycloak OIDC (replace dev auth) | `pytest tests/auth -v` (live Keycloak) | ☑ |
 | 10 | Technician PWA (chat) | `npm run dev` in `web/` | ☑ |
 | 11 | Curator/Admin console views | `npm run dev`, role=curator | ☑* |
-| 12 | Safety + answer-regression eval harness, demo seed | `python -m fixmate.evals.run` | ☐ |
+| 12 | Safety + answer-regression eval harness, demo seed | `python -m fixmate.evals.run` | ☑ |
 
 Dependency graph: 0 → 1 → {2, 3*} ; 3 needs 1+2 (captioning/embeddings); 4 needs 3; 5 needs 4; 6 needs 5; 7 needs 6; 8 needs 7; 9 needs 6; 10 needs 6; 11 needs 8; 12 needs 5 (grows with 8).
 
@@ -551,9 +551,9 @@ Run → PASS → commit.
 
 **Files:** Create `fixmate/evals/safety_cases.yaml` (cases: fabricated-spec question, out-of-corpus question must escalate, unsafe-fix submission must be flagged by pre-screen, approved-fix badging accuracy), `fixmate/evals/run.py` (runs cases through `compose_answer`/curation services, prints pass/fail table, nonzero exit on failure), `fixmate/evals/baseline.jsonl` (questions + retrieved_chunk_ids snapshot; rerun and report drift — per backend, never compared across backends, spec §8.4), `scripts/seed_demo.py` (demo org, equipment, ingest fixture manual, one approved fix).
 
-- [ ] **12.1** Implement safety runner + cases (CLAUDE.md §4.3 safety tests). `python -m fixmate.evals.run` → all pass on ollama backend.
-- [ ] **12.2** Record regression baseline; wire `pytest -m "not integration"` + evals into CI later.
-- [ ] **12.3** `python scripts/seed_demo.py` → 5-minute fresh-machine demo: compose up → seed → web chat answers with citations. Commit.
+- [x] **12.1** Implement safety runner + cases (CLAUDE.md §4.3 safety tests). `python -m fixmate.evals.run` → all pass on ollama backend. *(5/5 pass; exposed + fixed two robustness defects — abbreviated-UUID citation resolution in the composer and pre-screen JSON hardening. See `docs/phase-12-safety-evals-regression-demo-seed.md`.)*
+- [x] **12.2** Record regression baseline (`fixmate/evals/baseline.jsonl`, 4 answer questions); `--record-baseline` flag + drift report wired. CI wiring deferred per plan note.
+- [x] **12.3** `python scripts/seed_demo.py` → seeds `FixMate Demo` (3 manual chunks, 1 approved field_fix chunk, 1 figure). Idempotent. Commit.
 
 ---
 

@@ -1,7 +1,7 @@
 # FixMate — Setup From Scratch
 
 How to bring a FixMate development environment up on a fresh machine. Reflects the
-repository state through Phase 9 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service, HTTP API, feedback + candidate-fix submission, curation workflow, Keycloak OIDC auth). Keep this file in sync
+repository state through Phase 12 (infrastructure, schema/RLS, LLM provider abstraction, ingestion pipeline, hybrid retrieval, answer service, HTTP API, feedback + candidate-fix submission, curation workflow, Keycloak OIDC auth, technician PWA + curator/admin console, safety + regression evals + demo seed). Keep this file in sync
 with the codebase — see [Keeping this document current](#keeping-this-document-current).
 
 ---
@@ -153,6 +153,7 @@ pytest tests/api -v
 pytest tests/feedback -v
 pytest tests/curation -v
 pytest tests/auth -v
+pytest tests/evals -v
 ```
 
 The `tests/answers` suite covers the answer service (Phase 5): pure-unit groundedness
@@ -307,6 +308,55 @@ python -m fixmate.ingestion.cli tests/fixtures/sample-manual.pdf --org demo --eq
 
 The CLI prints the task id; the worker logs the resulting document id. Redis (already in
 the Compose stack) is the broker and result backend.
+
+---
+
+## Safety evals, regression baseline & demo seed (Phase 12)
+
+**Seed a demo tenant** for a fast end-to-end demo. This creates the `FixMate Demo`
+organization, ingests the built-in Pump X manual, and approves one field fix for error
+E47 (so an approved field fix surfaces with a verification badge):
+
+```bash
+python scripts/seed_demo.py
+```
+
+It prints the `organization_id` and other ids. Paste the `organization_id` into the web
+client's dev-login (section 8) to chat end-to-end, or ask from the CLI:
+
+```bash
+python -m fixmate.answers.cli "How do I fix error E47?" --org "FixMate Demo"
+```
+
+The seed is idempotent — re-running reuses the existing manual and approved fix.
+
+**Run the safety eval harness** (CLAUDE.md §4.3 safety tests). It builds (or reuses) a
+`FixMate Eval` tenant and runs the cases in `fixmate/evals/safety_cases.yaml` through the
+real answer + pre-screen services: out-of-corpus questions must escalate, covered error
+codes must produce a grounded cited answer, fabricated specs must be blocked, an approved
+fix must be served and badged, and an unsafe fix ("bypass the pressure relief valve") must
+be flagged by the pre-screen. It prints a pass/fail table and **exits non-zero on any
+failure** (a release gate, not a metric):
+
+```bash
+python -m fixmate.evals.run
+```
+
+Because every case drives the live Ollama model, a full run takes a few minutes on the CPU
+profile — keep `docker compose up -d` running.
+
+**Regression baseline.** Record the current retrieval set for the eval questions, then
+re-run later to see drift (informational; per-backend, never compared across backends —
+spec §8.4):
+
+```bash
+python -m fixmate.evals.run --record-baseline   # writes fixmate/evals/baseline.jsonl
+python -m fixmate.evals.run                      # prints "Regression drift vs baseline"
+```
+
+The `tests/evals` suite covers this layer: pure-unit checks that the cases file is
+well-formed and covers all four safety dimensions, plus `@pytest.mark.integration` cases
+that run the full safety suite against the live backend.
 
 ---
 

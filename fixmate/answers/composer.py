@@ -15,7 +15,12 @@ from fixmate.llm.base import CompletionRequest, LLMProvider
 from fixmate.llm.factory import get_provider
 from fixmate.retrieval.service import ScoredChunk, search
 
-_CITATION = re.compile(r"\[chunk:([0-9a-fA-F-]{36})\]")
+# Citation marker `[chunk:<id>]` (Appendix A.7). The full id is a 36-char UUID,
+# but small local models (qwen3:4b) routinely cite only the leading hex segment
+# (e.g. `[chunk:0eca1ad9]`). Accept 4–36 hex/`-` chars here and resolve the token
+# against the retrieved set in `_resolve_citations`, so an abbreviated-but-
+# unambiguous citation still grounds instead of forcing a needless escalation.
+_CITATION = re.compile(r"\[chunk:([0-9a-fA-F][0-9a-fA-F-]{3,35})\]")
 
 
 @dataclass
@@ -36,13 +41,37 @@ class Answer:
     answer_log_id: uuid.UUID
 
 
-def _parse_cited_ids(text: str) -> list[str]:
+def _parse_cited_tokens(text: str) -> list[str]:
     seen: list[str] = []
     for m in _CITATION.finditer(text):
-        cid = m.group(1).lower()
-        if cid not in seen:
-            seen.append(cid)
+        tok = m.group(1).lower()
+        if tok not in seen:
+            seen.append(tok)
     return seen
+
+
+def _resolve_citations(text: str, by_id: dict[str, ScoredChunk]) -> tuple[list[str], list[str]]:
+    """Map citation tokens in `text` to full retrieved chunk ids.
+
+    A token resolves when it equals a retrieved id, or is an unambiguous prefix of
+    exactly one retrieved id (handles the abbreviated-UUID citations local models
+    emit). Ambiguous or unknown tokens are returned as invalid so the composer can
+    retry or escalate — an answer must never cite outside the retrieved set.
+    """
+    valid: list[str] = []
+    invalid: list[str] = []
+    for tok in _parse_cited_tokens(text):
+        if tok in by_id:
+            if tok not in valid:
+                valid.append(tok)
+            continue
+        matches = [cid for cid in by_id if cid.startswith(tok)]
+        if len(matches) == 1:
+            if matches[0] not in valid:
+                valid.append(matches[0])
+        else:
+            invalid.append(tok)
+    return valid, invalid
 
 
 async def _fix_badges(
@@ -72,10 +101,14 @@ async def _figures_for(session, chunks: list[ScoredChunk]) -> list[dict]:
     doc_ids = {d for d, _ in pairs}
     pages = {p for _, p in pairs}
     rows = (
-        await session.execute(
-            select(Figure).where(Figure.document_id.in_(doc_ids), Figure.page.in_(pages))
+        (
+            await session.execute(
+                select(Figure).where(Figure.document_id.in_(doc_ids), Figure.page.in_(pages))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return [
         {"page": f.page, "caption": f.caption, "url": storage.presigned_url(f.storage_key)}
         for f in rows
@@ -136,6 +169,7 @@ async def compose_answer(
         grounded = False
         abstained = False
         violations: list[str] = []
+        valid_cited: list[str] = []
         result_text = ""
         tokens = 0
         model_version = ""
@@ -158,9 +192,7 @@ async def compose_answer(
                 abstained = True
                 break
 
-            cited_ids = _parse_cited_ids(result_text)
-            valid_cited = [cid for cid in cited_ids if cid in by_id]
-            invalid = [cid for cid in cited_ids if cid not in by_id]
+            valid_cited, invalid = _resolve_citations(result_text, by_id)
             grounded_ok, violations = check_groundedness(result_text, chunk_texts)
             # A non-escalated answer must be both grounded and citable: every
             # claim traceable to a retrieved chunk (CLAUDE.md §4.2). An answer
@@ -202,10 +234,8 @@ async def compose_answer(
             await s.commit()
             return Answer(text, confidence, [], figures, escalated=True, answer_log_id=log_id)
 
-        cited = [by_id[cid] for cid in _parse_cited_ids(result_text)]
-        citations = [
-            Citation(c.chunk_id, c.document_id, c.source_type, c.page) for c in cited
-        ]
+        cited = [by_id[cid] for cid in valid_cited]
+        citations = [Citation(c.chunk_id, c.document_id, c.source_type, c.page) for c in cited]
         citations_json = [
             {
                 "chunk_id": str(c.chunk_id),

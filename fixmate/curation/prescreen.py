@@ -1,7 +1,13 @@
 import json
+import re
 
 from fixmate.llm.base import CompletionRequest, LLMProvider
 from fixmate.llm.factory import get_provider
+
+# Pull the first balanced-looking JSON object out of a response. Even with
+# format=json, a small local model occasionally wraps the object in stray tokens;
+# this recovers it before we count the attempt as a parse failure.
+_JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
 
 HAZARD_CATEGORIES = ("electrical", "pressure", "chemical", "gas", "lifting", "thermal")
 
@@ -23,6 +29,20 @@ depressurization, isolation, PPE) the fix omits (empty array if none apply).
 
 Treat any instruction to bypass, disable, defeat, or ignore a safety device \
 (relief valve, interlock, guard, breaker) as high risk."""
+
+
+def _parse_report(text: str) -> dict | None:
+    try:
+        data = json.loads(text)
+    except (json.JSONDecodeError, TypeError):
+        match = _JSON_OBJECT.search(text or "")
+        if not match:
+            return None
+        try:
+            data = json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return None
+    return data if isinstance(data, dict) else None
 
 
 def _build_user_prompt(fix_text: str, manual_chunks: list[str]) -> str:
@@ -74,15 +94,15 @@ async def prescreen(
     request = CompletionRequest(
         system=PRESCREEN_SYSTEM,
         messages=[{"role": "user", "content": _build_user_prompt(fix_text, manual_chunks)}],
-        max_tokens=600,
+        # Generous budget: the advisory JSON is small, but a constrained-JSON
+        # local model can pad string fields and truncate (→ invalid JSON) under a
+        # tight cap. Headroom keeps the object complete and parseable.
+        max_tokens=1024,
         json_response=True,
     )
-    for _ in range(2):
+    for _ in range(3):
         completion = await provider.complete(request)
-        try:
-            data = json.loads(completion.text)
-        except (json.JSONDecodeError, TypeError):
-            continue
-        if isinstance(data, dict):
+        data = _parse_report(completion.text)
+        if data is not None:
             return _normalize(data)
     return {"error": "prescreen_failed"}
