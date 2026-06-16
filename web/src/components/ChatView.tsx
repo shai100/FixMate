@@ -4,13 +4,20 @@ import type { Answer, Equipment } from "../types";
 import { AnswerCard } from "./AnswerCard";
 import { EscalationCard } from "./EscalationCard";
 import { FeedbackBar } from "./FeedbackBar";
+import { Icon } from "./Icon";
 
 interface Turn {
   question: string;
   answer: Answer | null; // null while in flight
 }
 
-export function ChatView({ equipment }: { equipment: Equipment | null }) {
+export function ChatView({
+  equipment,
+  onBack,
+}: {
+  equipment: Equipment | null;
+  onBack: () => void;
+}) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [question, setQuestion] = useState("");
@@ -31,8 +38,8 @@ export function ChatView({ equipment }: { equipment: Equipment | null }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns]);
 
-  async function ask() {
-    const q = question.trim();
+  async function ask(text: string) {
+    const q = text.trim();
     if (!q || !conversationId || pending) return;
     setQuestion("");
     setError(null);
@@ -53,40 +60,89 @@ export function ChatView({ equipment }: { equipment: Equipment | null }) {
     }
   }
 
-  return (
-    <div className="chat-view">
-      <header className="chat-view__header">
-        <h1>FixMate</h1>
-        <span className="chat-view__equipment">
-          {equipment ? equipment.name : "General"}
-        </span>
-      </header>
+  const hasText = question.trim().length > 0;
+  const started = turns.length > 0;
 
-      <div className="chat-view__transcript">
+  return (
+    <div className="screen anim-fwd">
+      <div className="hd">
+        <button className="iconBtn" onClick={onBack} aria-label="Back">
+          <Icon name="back" size={22} />
+        </button>
+        <div className="eqIc" style={{ width: 36, height: 36, fontSize: "1.05rem" }}>
+          <Icon name="wrench" size={18} />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div
+            className="hdTitle ltr"
+            style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+          >
+            {equipment ? equipment.name : "General"}
+          </div>
+          <div className="hdSub">
+            {equipment
+              ? [equipment.manufacturer, equipment.model].filter(Boolean).join(" · ") || "Equipment"
+              : "No specific equipment"}
+          </div>
+        </div>
+      </div>
+
+      <div className="chatLog" aria-live="polite">
+        <div className="dayDiv">Today</div>
+
+        {!started && (
+          <>
+            <div className="chatHello">
+              <div className="chIc">
+                <Icon name="wrench" size={26} />
+              </div>
+              <div className="chT">Ask about this unit</div>
+              <div className="chS">
+                Answers are grounded in the service manuals and your team's approved fixes.
+              </div>
+            </div>
+            <div className="suggRow">
+              {SUGGESTIONS.map((s) => (
+                <button key={s} className="suggChip" onClick={() => ask(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
         {turns.map((turn, i) => (
           <div key={i} className="chat-turn">
-            <p className="chat-turn__question">{turn.question}</p>
+            <div className="uMsg reveal">{turn.question}</div>
             {turn.answer === null ? (
-              <p className="chat-turn__thinking">Thinking…</p>
+              <div className="typing">
+                <i />
+                <i />
+                <i />
+              </div>
             ) : turn.answer.escalated ? (
-              <EscalationCard answer={turn.answer} />
+              <div className="aMsg reveal">
+                <EscalationCard answer={turn.answer} />
+              </div>
             ) : (
-              <AnswerCard answer={turn.answer}>
-                <FeedbackBar messageId={turn.answer.message_id} />
-              </AnswerCard>
+              <div className="aMsg reveal">
+                <AnswerCard answer={turn.answer}>
+                  <FeedbackBar messageId={turn.answer.message_id} />
+                </AnswerCard>
+              </div>
             )}
           </div>
         ))}
         <div ref={bottomRef} />
       </div>
 
-      {error && <p className="chat-view__error">{error}</p>}
+      {error && <p className="chatError">{error}</p>}
 
       <form
-        className="chat-view__composer"
+        className="composer"
         onSubmit={(e) => {
           e.preventDefault();
-          ask();
+          ask(question);
         }}
       >
         <label htmlFor="question" className="visually-hidden">
@@ -94,15 +150,29 @@ export function ChatView({ equipment }: { equipment: Equipment | null }) {
         </label>
         <input
           id="question"
+          className="inp"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Describe the problem or error code…"
+          placeholder="Describe the issue…"
+          autoComplete="off"
           disabled={!conversationId || pending}
         />
-        <button type="submit" disabled={!conversationId || pending || !question.trim()}>
-          Ask
+        <button
+          type="submit"
+          className="compBtn prime"
+          aria-label="Send"
+          disabled={!conversationId || pending || !hasText}
+        >
+          <Icon name={hasText ? "send" : "mic"} size={19} />
         </button>
       </form>
     </div>
   );
 }
+
+// Static starter prompts (UI affordance only; the real answer comes from the API).
+const SUGGESTIONS = [
+  "What does this error code mean?",
+  "Output dropped — where do I start?",
+  "There's a leak at the housing",
+];

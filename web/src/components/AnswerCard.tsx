@@ -1,14 +1,15 @@
 import type { Answer, Citation, Confidence } from "../types";
+import { Icon, type IconName } from "./Icon";
 
 // Lines the answer prompt (Phase 5.4) emits as safety warnings. We surface them
 // ABOVE everything else regardless of where they appear in the body — the spec
 // pitfall table requires warnings-first presentation.
 const SAFETY_PREFIX = /^\s*(?:⚠️?|warning|danger|caution|safety)\b[:\s-]*/i;
 
-const CONFIDENCE_LABEL: Record<Confidence, string> = {
-  high: "High confidence",
-  medium: "Medium confidence",
-  low: "Low confidence",
+const CONFIDENCE: Record<Confidence, { label: string; icon: IconName }> = {
+  high: { label: "High confidence", icon: "check" },
+  medium: { label: "Medium confidence", icon: "halfdot" },
+  low: { label: "Low confidence", icon: "alert" },
 };
 
 interface ParsedBody {
@@ -34,15 +35,17 @@ function CitationLink({ citation }: { citation: Citation }) {
   const label =
     (citation.document_title ?? "Source") +
     (citation.page != null ? `, p.${citation.page}` : "");
+  const isFieldFix = citation.source_type === "field_fix";
   return (
     <li className="citation">
       <span
         className={`citation-badge citation-badge--${citation.source_type}`}
         data-testid={`citation-source-${citation.source_type}`}
       >
-        {citation.source_type === "field_fix" ? "Field fix" : "Manual"}
+        <Icon name={isFieldFix ? "bulb" : "book"} size={11} />
+        {isFieldFix ? "Field fix" : "Manual"}
       </span>
-      <span className="citation-label">{label}</span>
+      <span className="citation-label ltr">{label}</span>
     </li>
   );
 }
@@ -55,56 +58,65 @@ export function AnswerCard({
   children?: React.ReactNode;
 }) {
   const { warnings, rest } = parseBody(answer.text);
-  const hasFieldFix = answer.citations.some(
-    (c) => c.source_type === "field_fix",
-  );
+  const hasFieldFix = answer.citations.some((c) => c.source_type === "field_fix");
+  const conf = CONFIDENCE[answer.confidence];
 
   return (
-    <article className="answer-card" aria-label="Answer">
-      {warnings.length > 0 && (
-        <section className="safety-warnings" role="alert" aria-label="Safety warnings">
-          <h3 className="safety-warnings__heading">⚠️ Safety</h3>
-          <ul>
-            {warnings.map((w, i) => (
-              <li key={i}>{w}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
+    <article className="aCard" aria-label="Answer">
       <div className="answer-card__meta">
         <span
-          className={`confidence-chip confidence-chip--${answer.confidence}`}
+          className={`badge ${answer.confidence}`}
           data-testid="confidence-chip"
         >
-          {CONFIDENCE_LABEL[answer.confidence]}
+          <Icon name={conf.icon} size={13} />
+          {conf.label}
         </span>
         {hasFieldFix && (
-          <span className="fieldfix-badge" data-testid="fieldfix-badge">
-            ✓ Includes field-verified fix
+          <span className="chip okC" data-testid="fieldfix-badge">
+            <Icon name="check" size={12} />
+            Field-verified fix
           </span>
         )}
       </div>
 
-      <div className="answer-card__body">
+      {warnings.length > 0 && (
+        <section className="safety safety-warnings" role="alert" aria-label="Safety warnings">
+          <Icon name="alert" size={16} />
+          <div>
+            <h3 className="safety__heading">Safety</h3>
+            <ul>
+              {warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      <div className="aHead aBody answer-card__body">
         {rest.map((line, i) => (
           <p key={i}>{line}</p>
         ))}
       </div>
 
       {answer.figures.length > 0 && (
-        <div className="answer-card__figures">
+        <div>
           {answer.figures.map((fig, i) => (
-            <figure key={i}>
+            <figure className="figBox" key={i}>
               <img src={fig.url} alt={fig.caption ?? `Figure on page ${fig.page}`} />
-              {fig.caption && <figcaption>{fig.caption}</figcaption>}
+              {fig.caption && (
+                <figcaption className="figCap">
+                  <Icon name="image" size={11} />
+                  <span>{fig.caption}</span>
+                </figcaption>
+              )}
             </figure>
           ))}
         </div>
       )}
 
       {answer.citations.length > 0 && (
-        <footer className="answer-card__citations">
+        <footer className="citeRow">
           <h4>Sources</h4>
           <ul>
             {answer.citations.map((c) => (

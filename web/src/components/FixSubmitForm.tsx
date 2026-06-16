@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Icon } from "./Icon";
 
 // Candidate-fix submission (FR-12). Opened when the technician taps "No" in the
 // FeedbackBar. Photos are read as base64 data URLs and passed through to the
@@ -33,39 +34,48 @@ export function FixSubmitForm({
 
   return (
     <form
-      className="fix-form"
+      className="fixWrap"
+      style={{ padding: 0 }}
       onSubmit={(e) => {
         e.preventDefault();
         if (fixText.trim()) onSubmit(fixText.trim(), photos);
       }}
     >
-      <label htmlFor="fix-text">What actually fixed it?</label>
-      <textarea
-        id="fix-text"
-        value={fixText}
-        onChange={(e) => setFixText(e.target.value)}
-        rows={4}
-        required
-        placeholder="Describe the steps that resolved the issue…"
-      />
+      <div className="noticeWarn">
+        <Icon name="bulb" size={16} />
+        <span>Your fix helps the next technician — after a senior tech approves it.</span>
+      </div>
 
-      <label htmlFor="fix-photos">Add photos (optional)</label>
-      <input
-        id="fix-photos"
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={(e) => handleFiles(e.target.files)}
-      />
-      {photos.length > 0 && (
-        <p className="fix-form__count">{photos.length} photo(s) attached</p>
-      )}
+      <div>
+        <label className="fieldLbl" htmlFor="fix-text">
+          What actually fixed it?
+        </label>
+        <textarea
+          id="fix-text"
+          className="inp"
+          value={fixText}
+          onChange={(e) => setFixText(e.target.value)}
+          required
+          placeholder="Describe the real cause and what you did. Include part numbers and timings where possible."
+        />
+      </div>
 
-      <div className="fix-form__actions">
-        <button type="button" onClick={onCancel} disabled={submitting}>
+      <label className={`photoBtn${photos.length > 0 ? " has" : ""}`}>
+        <Icon name="camera" size={17} />
+        <span>
+          {photos.length > 0
+            ? `${photos.length} photo(s) attached`
+            : "Add photos (optional)"}
+        </span>
+        <input type="file" accept="image/*" multiple onChange={(e) => handleFiles(e.target.files)} />
+      </label>
+
+      <div className="fbRow" style={{ border: "none", paddingTop: 0, gap: 8 }}>
+        <button type="button" className="btn sec" onClick={onCancel} disabled={submitting}>
           Cancel
         </button>
-        <button type="submit" disabled={submitting || !fixText.trim()}>
+        <button type="submit" className="btn okBtn" disabled={submitting || !fixText.trim()}>
+          <Icon name="check" size={17} />
           {submitting ? "Submitting…" : "Submit fix for review"}
         </button>
       </div>

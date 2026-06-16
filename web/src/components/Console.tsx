@@ -4,6 +4,7 @@ import { ReviewQueue } from "./ReviewQueue";
 import { DocumentsAdmin } from "./DocumentsAdmin";
 import { EquipmentAdmin } from "./EquipmentAdmin";
 import { UsersAdmin } from "./UsersAdmin";
+import { Icon } from "./Icon";
 
 type Tab = "queue" | "documents" | "equipment" | "users";
 
@@ -22,12 +23,33 @@ const TABS: TabDef[] = [
 
 // Curator/Admin console (Phase 11). Route guard by role: curators reach the
 // review queue + content admin; only admins see user/role management (FR-14).
-export function Console({ role }: { role: DevIdentity["role"] }) {
+export function Console({
+  role,
+  onSignOut,
+}: {
+  role: DevIdentity["role"];
+  onSignOut?: () => void;
+}) {
   const tabs = TABS.filter((t) => !t.adminOnly || role === "admin");
   const [tab, setTab] = useState<Tab>("queue");
 
   return (
     <div className="console">
+      <header className="console-topbar">
+        <div className="logoMark">
+          <Icon name="wrench" size={22} />
+        </div>
+        <div>
+          <div className="ctTitle">FixMate</div>
+          <div className="ctSub">CURATION CONSOLE · {role.toUpperCase()}</div>
+        </div>
+        {onSignOut && (
+          <button type="button" className="console-signout" onClick={onSignOut}>
+            Sign out
+          </button>
+        )}
+      </header>
+
       <nav className="console-nav" aria-label="Console sections">
         {tabs.map((t) => (
           <button

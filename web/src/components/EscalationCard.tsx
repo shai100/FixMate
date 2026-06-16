@@ -1,4 +1,5 @@
 import type { Answer } from "../types";
+import { Icon } from "./Icon";
 
 // Low-confidence path (FR-4): the composer replaces the answer body with a
 // "don't know" response and sets escalated=true. We never dress this up as a
@@ -13,7 +14,10 @@ export function EscalationCard({
 }) {
   return (
     <article className="escalation-card" role="alert" aria-label="Escalation">
-      <h3 className="escalation-card__heading">Not confident enough to answer</h3>
+      <h3 className="escalation-card__heading">
+        <Icon name="alert" size={17} />
+        Not confident enough to answer
+      </h3>
       <p className="escalation-card__body">{answer.text}</p>
 
       {answer.citations.length > 0 && (
@@ -21,7 +25,7 @@ export function EscalationCard({
           <h4>Nearest sections</h4>
           <ul>
             {answer.citations.map((c) => (
-              <li key={c.chunk_id}>
+              <li key={c.chunk_id} className="ltr">
                 {(c.document_title ?? "Source") +
                   (c.page != null ? `, p.${c.page}` : "")}
               </li>
@@ -30,11 +34,7 @@ export function EscalationCard({
         </div>
       )}
 
-      <button
-        type="button"
-        className="escalation-card__action"
-        onClick={onEscalate}
-      >
+      <button type="button" className="escalation-card__action" onClick={onEscalate}>
         Escalate to a senior technician
       </button>
     </article>

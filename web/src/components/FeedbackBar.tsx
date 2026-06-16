@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { api, ApiError } from "../api";
 import { FixSubmitForm } from "./FixSubmitForm";
+import { Icon } from "./Icon";
 
 type State = "idle" | "submitting" | "thanks" | "fix-form" | "fix-submitted";
 
@@ -39,19 +40,24 @@ export function FeedbackBar({ messageId }: { messageId: string }) {
   }
 
   if (state === "thanks") {
-    return <p className="feedback-bar feedback-bar--done">Thanks for the feedback.</p>;
+    return (
+      <p className="fbRow fbDone">
+        <Icon name="check" size={14} /> Logged as helpful — thanks!
+      </p>
+    );
   }
   if (state === "fix-submitted") {
     return (
-      <p className="feedback-bar feedback-bar--done">
-        Fix submitted for review. A curator will verify it before it reaches other technicians.
+      <p className="fbRow fbDone">
+        <Icon name="check" size={14} /> Fix submitted for review. A curator verifies it
+        before other technicians see it.
       </p>
     );
   }
   if (state === "fix-form") {
     return (
-      <div className="feedback-bar">
-        {error && <p className="feedback-bar__error">{error}</p>}
+      <div className="fbRow" style={{ flexDirection: "column", alignItems: "stretch" }}>
+        {error && <p className="fbError">{error}</p>}
         <FixSubmitForm
           submitting={false}
           onSubmit={submitFix}
@@ -62,22 +68,24 @@ export function FeedbackBar({ messageId }: { messageId: string }) {
   }
 
   return (
-    <div className="feedback-bar">
-      {error && <p className="feedback-bar__error">{error}</p>}
-      <span>Did it help?</span>
+    <div className="fbRow">
+      {error && <p className="fbError">{error}</p>}
+      <b>Did it help?</b>
       <button
         type="button"
+        className="fbBtn fbYes"
         onClick={() => sayHelped(true)}
         disabled={state === "submitting"}
       >
-        Yes
+        <Icon name="thumbsUp" size={13} /> Yes
       </button>
       <button
         type="button"
+        className="fbBtn fbNo"
         onClick={() => sayHelped(false)}
         disabled={state === "submitting"}
       >
-        No
+        <Icon name="thumbsDown" size={13} /> No
       </button>
     </div>
   );
