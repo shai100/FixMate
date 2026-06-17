@@ -65,13 +65,17 @@ export function DocumentsAdmin() {
     setStatus(null);
     try {
       const res = await api.uploadDocument(file, equipmentId, title.trim() || undefined);
+      // The upload itself is done the moment the API accepts it (202). Clear the
+      // form and release the button straight away so the technician can queue the
+      // next manual — ingestion then progresses in the background via polling,
+      // which no longer blocks the form.
       setFile(null);
       setTitle("");
-      await pollIngestion(res.task_id);
+      setBusy(false);
+      void pollIngestion(res.task_id);
     } catch (e) {
       setError(e instanceof ApiError ? e.detail : "Upload failed");
       setStatus(null);
-    } finally {
       setBusy(false);
     }
   }
