@@ -51,7 +51,9 @@ export function Console({
         </div>
         <div>
           <div className="ctTitle">FixMate</div>
-          <div className="ctSub">CURATION CONSOLE · {role.toUpperCase()}</div>
+          <div className="ctSub">
+            CURATION CONSOLE · {role.toUpperCase()} · <span className="ltr">v{__APP_VERSION__}</span>
+          </div>
         </div>
         {onSignOut && (
           <button type="button" className="console-signout" onClick={onSignOut}>

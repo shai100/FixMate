@@ -120,7 +120,7 @@ export function SettingsScreen({
               padding: "8px 0",
             }}
           >
-            FixMate · web client
+            FixMate · web client · v{__APP_VERSION__}
           </div>
         </div>
       </div>

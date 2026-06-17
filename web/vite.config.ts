@@ -7,11 +7,37 @@
 // (3) the dev server proxies API paths to the FastAPI backend on :8000 so the
 // frontend and API look same-origin in development, keeping auth and CORS simple.
 // The `test` block configures Vitest (jsdom environment + the global setup file).
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Build version string, injected as the `__APP_VERSION__` global (see
+// src/version.d.ts) and shown in the GUI. The patch number is the git commit
+// count, so it auto-increments on every commit with no manual bump — the
+// major.minor base still comes from package.json. The short commit hash is
+// appended for traceability back to an exact build. Both git lookups fall back
+// gracefully (e.g. building outside a git checkout) so the build never fails.
+function buildVersion(): string {
+  const base = JSON.parse(readFileSync("./package.json", "utf-8")).version as string;
+  const [major = "0", minor = "0"] = base.split(".");
+  const git = (cmd: string, fallback: string) => {
+    try {
+      return execSync(cmd, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    } catch {
+      return fallback;
+    }
+  };
+  const commits = git("git rev-list --count HEAD", "0");
+  const hash = git("git rev-parse --short HEAD", "nogit");
+  return `${major}.${minor}.${commits}+${hash}`;
+}
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(buildVersion()),
+  },
   plugins: [
     react(),
     VitePWA({
