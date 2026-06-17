@@ -88,26 +88,39 @@ export function DocumentsAdmin() {
    * "ingested" — otherwise the new manual would never appear. A "failure" state
    * shows an explicit error; if polling times out the manual may still finish
    * later, so we refresh anyway and tell the user to check back.
+   *
+   * Any error from the status request itself (network drop, API error) is caught
+   * and shown too — otherwise it would surface as an unhandled promise rejection
+   * and the technician would see the status frozen with no explanation.
    */
   async function pollIngestion(taskId: string) {
     setStatus(statusLabel("queued"));
-    for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
-      const s = await api.documentStatus(taskId);
-      if (s.status === "ingested") {
-        setStatus(statusLabel("ingested"));
-        setRevision((r) => r + 1);
-        return;
+    try {
+      for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
+        const s = await api.documentStatus(taskId);
+        if (s.status === "ingested") {
+          setStatus(statusLabel("ingested"));
+          setRevision((r) => r + 1);
+          return;
+        }
+        if (s.status === "failure") {
+          setStatus(null);
+          setError("Ingestion failed — the file could not be processed. Please try again.");
+          return;
+        }
+        setStatus(statusLabel(s.status));
+        await sleep(POLL_INTERVAL_MS);
       }
-      if (s.status === "failure") {
-        setStatus(null);
-        setError("Ingestion failed — the file could not be processed. Please try again.");
-        return;
-      }
-      setStatus(statusLabel(s.status));
-      await sleep(POLL_INTERVAL_MS);
+      setStatus("Still processing in the background — check back shortly.");
+      setRevision((r) => r + 1);
+    } catch (e) {
+      setStatus(null);
+      setError(
+        e instanceof ApiError
+          ? `Could not check ingestion status: ${e.detail}`
+          : "Could not check ingestion status — the manual may still be processing.",
+      );
     }
-    setStatus("Still processing in the background — check back shortly.");
-    setRevision((r) => r + 1);
   }
 
   const live = new Set(docs?.filter((d) => d.superseded_by === null).map((d) => d.id));

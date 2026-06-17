@@ -31,8 +31,11 @@ def extract_pages(path: str | Path) -> list[tuple[int, str]]:
 def extract_figures(path: str | Path) -> list[ExtractedFigure]:
     """Extract every embedded image as an ``ExtractedFigure`` (PNG-encoded).
 
-    Normalizes CMYK/alpha images to RGB before PNG encoding, since PyMuPDF can't
-    encode >4-channel colorspaces directly.
+    Normalizes non-RGB/gray images to RGB before PNG encoding, since PNG (and
+    therefore PyMuPDF's ``tobytes("png")``) only supports DeviceGray and
+    DeviceRGB. PDF manuals routinely embed print-oriented colorspaces —
+    DeviceCMYK and single-channel Separation/spot-color images — which must be
+    converted first or encoding raises an ``FzErrorArgument``.
     """
     figures: list[ExtractedFigure] = []
     with fitz.open(path) as doc:
@@ -42,9 +45,12 @@ def extract_figures(path: str | Path) -> list[ExtractedFigure]:
                 rects = page.get_image_rects(xref)
                 rect = rects[0] if rects else page.rect
                 pix = fitz.Pixmap(doc, xref)
-                # Normalize CMYK / alpha-bearing pixmaps to plain RGB before PNG
-                # encoding; tobytes() rejects >4 channel colorspaces.
-                if pix.n - pix.alpha >= 4:
+                # Convert anything that isn't already plain gray/RGB to RGB before
+                # PNG encoding. A channel-count check (n >= 4) is not enough:
+                # single-channel Separation/spot colorspaces have n == 1 yet are
+                # still rejected by the PNG encoder, so key on the colorspace name.
+                cs = pix.colorspace
+                if cs is None or cs.name not in ("DeviceGray", "DeviceRGB"):
                     pix = fitz.Pixmap(fitz.csRGB, pix)
                 figures.append(
                     ExtractedFigure(
