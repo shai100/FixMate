@@ -50,7 +50,7 @@ class OllamaProvider:
         # default) would take ~300 s at 8 t/s.  700 tokens ≈ 300 thinking +
         # 400 answer — fits in ~90 s and produces a usable dev answer.
         # The Anthropic backend has no such cap; this is local-only.
-        LOCAL_MAX = 700
+        LOCAL_MAX = 600
         payload = {
             "model": self._model,
             "messages": messages,
