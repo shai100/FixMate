@@ -62,6 +62,20 @@ def put_object(org_id: uuid.UUID, key_suffix: str, data: bytes, content_type: st
     return key
 
 
+def get_object(key: str) -> bytes:
+    """Fetch the raw bytes of one object by its full key.
+
+    Used to stream an original manual back to the browser through the API (rather
+    than exposing object storage directly), so the download inherits the API's
+    tenant auth.
+
+    Raises:
+        ClientError: If the object does not exist or cannot be read.
+    """
+    resp = _client.get_object(Bucket=settings.s3_bucket, Key=key)
+    return resp["Body"].read()
+
+
 def delete_object(key: str) -> None:
     """Best-effort delete of one object by its full key.
 

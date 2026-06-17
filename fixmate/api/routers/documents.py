@@ -12,7 +12,8 @@ import tempfile
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from botocore.exceptions import ClientError
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from sqlalchemy import select
 
 from fixmate.api.deps import AuthContext, get_current_user
@@ -192,6 +193,39 @@ async def delete_document(
     # hiccup can never leave a half-deleted index behind.
     for key in [storage_key, *figure_keys]:
         storage.delete_object(key)
+
+
+@router.get("/{document_id}/download")
+async def download_document(
+    document_id: uuid.UUID,
+    auth: AuthContext = Depends(get_current_user),
+) -> Response:
+    """Stream the original manual PDF back to the client as a file download.
+
+    The object store bucket is private, so rather than expose it the API fetches
+    the bytes itself (under the caller's tenant scope via ``session_for_org``) and
+    returns them with a ``Content-Disposition: attachment`` header so the browser
+    saves the file. The PDF is looked up by document id, not by raw storage key,
+    so a caller can only ever download a manual their own org owns.
+    """
+    async with session_for_org(auth.org_id) as s:
+        doc = await s.get(Document, document_id)
+        if doc is None:
+            raise HTTPException(status_code=404, detail="document not found")
+        title = doc.title
+        storage_key = doc.storage_key
+    try:
+        data = storage.get_object(storage_key)
+    except ClientError as exc:
+        raise HTTPException(status_code=404, detail="stored file is unavailable") from exc
+
+    filename = title if title.lower().endswith(".pdf") else f"{title}.pdf"
+    # RFC 6266: quote the filename so titles with spaces survive the round-trip.
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/{task_id}", response_model=DocumentStatus)

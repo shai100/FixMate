@@ -170,7 +170,7 @@ per resource:
 | `conversations` | Create conversations, list messages |
 | `ask` | `POST /conversations/{id}/ask` — the core Q&A endpoint |
 | `equipment` | Equipment profiles CRUD |
-| `documents` | Upload manuals → kicks off ingestion |
+| `documents` | Upload manuals → kicks off ingestion; poll ingestion status (`GET /documents/{task_id}`); stream the original PDF back (`GET /documents/{document_id}/download`) |
 | `feedback` | "Did it help?" + technician fix submission |
 | `curation` | Review queue + fix lifecycle actions (curator/admin) |
 | `admin` | User management |

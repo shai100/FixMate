@@ -16,6 +16,7 @@ import type {
   Conversation,
   DevIdentityResponse,
   DocumentRow,
+  DocumentStatus,
   Equipment,
   FeedbackResult,
   FixSummary,
@@ -218,6 +219,30 @@ export const api = {
       method: "POST",
       body: form,
     });
+  },
+
+  documentStatus(taskId: string): Promise<DocumentStatus> {
+    return request<DocumentStatus>(`/documents/${encodeURIComponent(taskId)}`);
+  },
+
+  /** Fetch the original manual PDF as a Blob. Uses `fetch` directly (not the
+   *  JSON `request` helper) because the response is binary; still attaches the
+   *  auth headers and raises `ApiError` on failure so callers can show a message. */
+  async downloadDocument(documentId: string): Promise<Blob> {
+    const res = await fetch(`/documents/${documentId}/download`, {
+      headers: { ...authHeaders() },
+    });
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const body = await res.json();
+        detail = typeof body.detail === "string" ? body.detail : detail;
+      } catch {
+        // non-JSON error body; keep statusText
+      }
+      throw new ApiError(res.status, detail);
+    }
+    return res.blob();
   },
 
   // --- Fixes admin (curator/admin): list all, create, edit, delete ---

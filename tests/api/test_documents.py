@@ -89,6 +89,36 @@ async def test_delete_document(client, org_user_equipment):
     assert doc_id not in [d["id"] for d in listed.json()]
 
 
+async def test_download_document_returns_pdf(client, org_user_equipment):
+    org_a, user_id, eq_id = org_user_equipment
+    headers = auth_headers(org_a, user_id, role="admin")
+    from fixmate.core import storage
+
+    key = storage.put_object(org_a, "docs/download-me.pdf", b"%PDF-1.4 hello", "application/pdf")
+    async with session_for_org(org_a) as s:
+        doc = Document(
+            organization_id=org_a, equipment_id=eq_id, title="Download Me", storage_key=key
+        )
+        s.add(doc)
+        await s.commit()
+        doc_id = str(doc.id)
+
+    resp = await client.get(f"/documents/{doc_id}/download", headers=headers)
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert "Download Me.pdf" in resp.headers["content-disposition"]
+    assert resp.content == b"%PDF-1.4 hello"
+
+
+async def test_download_missing_document_404(client, org_user_equipment):
+    import uuid as _uuid
+
+    org_a, user_id, _ = org_user_equipment
+    headers = auth_headers(org_a, user_id, role="admin")
+    resp = await client.get(f"/documents/{_uuid.uuid4()}/download", headers=headers)
+    assert resp.status_code == 404
+
+
 async def test_upload_rejects_non_pdf(client, org_user_equipment):
     org_a, user_id, eq_id = org_user_equipment
     headers = auth_headers(org_a, user_id, role="admin")

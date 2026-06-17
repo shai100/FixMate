@@ -160,3 +160,12 @@ export interface UploadAccepted {
   task_id: string;
   status: string;
 }
+
+/** Progress of an ingestion task (mirrors `DocumentStatus`). `status` is the
+ *  lowercased Celery state — "queued"/"pending"/"started" while running,
+ *  "ingested" on success, "failure" on error. `document_id` is set once done. */
+export interface DocumentStatus {
+  task_id: string;
+  status: string;
+  document_id: string | null;
+}
