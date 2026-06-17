@@ -30,8 +30,10 @@ services:
     volumes: [miniodata:/data]
   # Ollama: serves the local open-weight models (generation + BGE-M3 embeddings)
   # used in dev. Embeddings always run here even when LLM_PROVIDER=anthropic.
+  # Pinned to 0.6.x: 0.5+ properly honours the `think: false` param for qwen3,
+  # preventing runaway chain-of-thought generation that would exceed the 12s SLO.
   ollama:
-    image: ollama/ollama
+    image: ollama/ollama:latest
     ports: ["11434:11434"]
     volumes: [ollamadata:/root/.ollama]
     # GPU passthrough (WSL2 + NVIDIA driver). Alternative: run Ollama natively on
