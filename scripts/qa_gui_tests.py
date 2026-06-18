@@ -54,25 +54,21 @@ results: list[Result] = []
 
 
 def login_via_storage(page: Page, org_id: str, user_id: str, role: str):
-    """Seed localStorage identity and navigate — deterministic regardless of DEV_AUTO_LOGIN.
-
-    Uses goto() rather than reload() so that any in-flight navigation from a
-    previous test's sign-out is cancelled cleanly before we set the identity.
-    """
-    # Explicit 60 s navigation timeout — decoupled from the global default so a
-    # slow post-sign-out redirect in the previous test cannot cause a collision.
-    page.goto(APP, wait_until="domcontentloaded", timeout=60000)
+    """Seed localStorage identity and reload — deterministic regardless of DEV_AUTO_LOGIN."""
+    if not page.url.startswith(APP):
+        page.goto(APP, timeout=60000)
     page.evaluate(
         "([o,u,r]) => localStorage.setItem('fixmate.devIdentity', JSON.stringify({orgId:o,userId:u,role:r}))",
         [org_id, user_id, role],
     )
-    page.goto(APP, wait_until="domcontentloaded", timeout=60000)
+    page.reload(timeout=60000)
 
 
 def clear_identity(page: Page):
-    page.goto(APP, wait_until="domcontentloaded", timeout=60000)
+    if not page.url.startswith(APP):
+        page.goto(APP, timeout=60000)
     page.evaluate("() => localStorage.removeItem('fixmate.devIdentity')")
-    page.goto(APP, wait_until="domcontentloaded", timeout=60000)
+    page.reload(timeout=60000)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -601,9 +597,9 @@ def tc_chat_06(page: Page) -> Result:
         else:
             r.note("Composer not immediately disabled mid-flight (may be very fast)")
 
-        # Wait for response
+        # Wait for response — 480 s covers worst-case Ollama queue after prior tests
         page.locator("article[aria-label='Answer'], article[aria-label='Escalation']").first.wait_for(
-            state="visible", timeout=240000
+            state="visible", timeout=480000
         )
         r.ok("Composer re-enabled after answer received ✓")
     except Exception as e:
@@ -615,9 +611,9 @@ def tc_chat_07(page: Page) -> Result:
     r = Result("TC-CHAT-07", "Multi-turn conversation keeps history")
     try:
         open_pump_chat(page)
-        ask_question(page, "How do I fix error E47?", timeout=240000)
+        ask_question(page, "How do I fix error E47?", timeout=480000)
         r.ok("First turn answered ✓")
-        ask_question(page, "What is the torque spec?", timeout=240000)
+        ask_question(page, "What is the torque spec?", timeout=480000)
         r.ok("Second turn answered ✓")
         turns = page.locator(".chat-turn, [class*='chatTurn'], [class*='turn']")
         if turns.count() >= 2:
