@@ -36,12 +36,22 @@ def extract_figures(path: str | Path) -> list[ExtractedFigure]:
     DeviceRGB. PDF manuals routinely embed print-oriented colorspaces —
     DeviceCMYK and single-channel Separation/spot-color images — which must be
     converted first or encoding raises an ``FzErrorArgument``.
+
+    Deduplicates by ``xref`` (the PDF's internal object id for an image): manuals
+    embed the same logo/header image on every page, all sharing one xref. Without
+    this, a single recurring image would be extracted — and later captioned by a
+    vision LLM — once per page, dominating ingestion time and cost for no benefit.
+    The first occurrence's page/bbox is kept as representative.
     """
     figures: list[ExtractedFigure] = []
+    seen_xrefs: set[int] = set()
     with fitz.open(path) as doc:
         for i, page in enumerate(doc):
             for img in page.get_images(full=True):
                 xref = img[0]
+                if xref in seen_xrefs:
+                    continue
+                seen_xrefs.add(xref)
                 rects = page.get_image_rects(xref)
                 rect = rects[0] if rects else page.rect
                 pix = fitz.Pixmap(doc, xref)

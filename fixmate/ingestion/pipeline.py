@@ -24,6 +24,10 @@ from fixmate.llm.base import LLMProvider
 from fixmate.llm.embeddings import embed
 from fixmate.llm.factory import get_provider
 
+# Max figure-captioning vision calls in flight at once. Tuned to overlap network
+# latency without overwhelming the provider's per-request concurrency limits.
+_CAPTION_CONCURRENCY = 8
+
 
 async def ingest_document(
     org_id: uuid.UUID,
@@ -60,9 +64,19 @@ async def ingest_document(
     embeddings = await embed([c.text for c in text_chunks]) if text_chunks else []
 
     doc_id = uuid.uuid4()
-    figure_rows = [
-        await caption_and_store(provider, fig, org_id, doc_id, title) for fig in figures
-    ]
+    # Caption figures concurrently. Each caption is an independent LLM vision call
+    # (a network round-trip on the Anthropic backend); running them serially made
+    # ingestion time scale linearly with the figure count and was the main cause
+    # of long "Queued for ingestion…" waits. A bounded semaphore overlaps the
+    # round-trips while capping in-flight requests so a figure-heavy manual can't
+    # open hundreds of connections at once and trip provider rate limits.
+    sem = asyncio.Semaphore(_CAPTION_CONCURRENCY)
+
+    async def _caption(fig):
+        async with sem:
+            return await caption_and_store(provider, fig, org_id, doc_id, title)
+
+    figure_rows = await asyncio.gather(*(_caption(fig) for fig in figures))
 
     async with session_for_org(org_id) as s:
         prev = await registry.latest_document(s, org_id, equipment_id, title)
