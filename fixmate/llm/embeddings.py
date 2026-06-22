@@ -78,7 +78,14 @@ async def embed(
             async with sem:
                 resp = await client.post(
                     f"{settings.ollama_base_url.rstrip('/')}/api/embed",
-                    json={"model": settings.ollama_embedding_model, "input": batch},
+                    json={
+                        "model": settings.ollama_embedding_model,
+                        "input": batch,
+                        # Keep the embedding model resident between requests so a
+                        # query embed never pays a cold model load (the dominant
+                        # retrieval latency on the 4 GB profile, ~108 s cold).
+                        "keep_alive": settings.ollama_keep_alive_param,
+                    },
                 )
                 resp.raise_for_status()
                 vectors = resp.json()["embeddings"]

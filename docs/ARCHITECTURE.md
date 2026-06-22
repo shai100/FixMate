@@ -236,11 +236,17 @@ host-absolute paths across the OS boundary.
 
 [`service.py`](../fixmate/retrieval/service.py) `search(org_id, equipment_id, query, top_k)`:
 
-1. Embed the query.
+1. Embed the query. (On the local profile the embedding model is kept resident via
+   `OLLAMA_KEEP_ALIVE=-1`; otherwise Ollama cold-loads `bge-m3` on each query — ~108 s vs
+   ~0.5 s warm — because generation and embedding models otherwise evict each other.)
 2. Run **vector search** (pgvector) and **keyword search** (Postgres FTS) in parallel within one
    tenant-scoped session.
 3. **Reciprocal-rank fusion** merges the two ranked lists (`fusion.py`).
-4. Rerank the top `CANDIDATE_POOL` (=20) candidates (`rerank.py`).
+4. Rerank the top `CANDIDATE_POOL` (=20) candidates (`rerank.py`). Reranking reuses the
+   already-computed query vector and the candidates' **stored** `Chunk.embedding`s — pure
+   in-memory cosine math, no model round-trip. (It deliberately does *not* re-embed the query
+   and candidates at request time; doing so added ~7s/query on the CPU profile for no ranking
+   gain, since those vectors already exist in the index.)
 5. **Approved-fix boost** is applied to the *rerank* scores, so an approved `field_fix` chunk
    outranks comparably-relevant manual content — this is the moat, provable by the curation
    moat test.

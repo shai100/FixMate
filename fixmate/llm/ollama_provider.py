@@ -10,6 +10,7 @@ import re
 
 import httpx
 
+from fixmate.core.settings import settings
 from fixmate.llm.base import CompletionRequest, CompletionResult
 
 # qwen3's chat template opens the reasoning block in the prompt, so the model's
@@ -56,6 +57,10 @@ class OllamaProvider:
             "messages": messages,
             "stream": False,
             "think": False,  # forward-compat for Ollama ≥ 0.6 when it ships
+            # Keep the generation model resident so it isn't evicted by the
+            # embedding model between requests (and vice-versa) — model swapping
+            # was adding a full cold load to each answer on the 4 GB profile.
+            "keep_alive": settings.ollama_keep_alive_param,
             "options": {"num_predict": min(request.max_tokens, LOCAL_MAX)},
         }
         if request.json_response:

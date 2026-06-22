@@ -59,6 +59,27 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_generation_model: str = "qwen3:4b"
     ollama_embedding_model: str = "bge-m3"
+    # How long Ollama keeps a model resident after a request. "-1" = never unload,
+    # so the embedding and generation models stay loaded and no query pays a cold
+    # model load (the dominant retrieval latency on the 4 GB profile — see the
+    # OLLAMA_KEEP_ALIVE note in docker-compose.yml). Sent on every Ollama request
+    # so it also applies to an Ollama running outside Compose (native Windows).
+    # A duration string ("5m") or a number of seconds; "-1" means keep forever.
+    ollama_keep_alive: str = "-1"
+
+    @property
+    def ollama_keep_alive_param(self) -> str | int:
+        """The ``keep_alive`` value coerced to the type Ollama's JSON API expects.
+
+        Ollama's ``/api/embed`` rejects a *string* integer ("-1") with HTTP 400 —
+        the sentinel must be sent as a JSON number — while duration strings like
+        "5m" must stay strings. This returns an ``int`` for whole-number values
+        (including the "-1" = never-unload sentinel) and the raw string otherwise.
+        """
+        raw = self.ollama_keep_alive.strip()
+        if raw.lstrip("-").isdigit():
+            return int(raw)
+        return raw
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
     dev_auth: bool = True

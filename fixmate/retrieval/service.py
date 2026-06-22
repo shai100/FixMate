@@ -87,7 +87,7 @@ async def search(
     )
     candidates = [by_id[cid] for cid in fused_ids[:CANDIDATE_POOL]]
 
-    reranked = await rerank(query, candidates)
+    reranked = rerank(qvec, candidates)
     rerank_scores = {str(chunk.id): score for chunk, score in reranked}
     field_fix_ids = {cid for cid, c in by_id.items() if c.source_type == "field_fix"}
     boosted = apply_field_fix_boost(rerank_scores, field_fix_ids)

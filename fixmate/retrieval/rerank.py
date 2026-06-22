@@ -9,7 +9,6 @@ cross-encoder (bge-reranker-v2-m3) is a drop-in upgrade with the same signature.
 import math
 
 from fixmate.core.models import Chunk
-from fixmate.llm.embeddings import embed
 
 
 def _cosine_to_unit(a: list[float], b: list[float]) -> float:
@@ -28,17 +27,25 @@ def _cosine_to_unit(a: list[float], b: list[float]) -> float:
     return (dot / (na * nb) + 1.0) / 2.0
 
 
-async def rerank(query: str, chunks: list[Chunk]) -> list[tuple[Chunk, float]]:
-    """Re-score and reorder ``chunks`` by similarity to ``query`` (best first).
+def rerank(query_embedding: list[float], chunks: list[Chunk]) -> list[tuple[Chunk, float]]:
+    """Re-score and reorder ``chunks`` by similarity to the query (best first).
 
-    Embeds the query and all candidates in one batch, scores each candidate, and
-    returns ``(chunk, score)`` pairs sorted high-to-low. Empty in, empty out.
-    Cross-encoder bge-reranker-v2-m3 is a drop-in upgrade later — same signature.
+    Scores each candidate against the query using the *already-computed*
+    embeddings: ``query_embedding`` was produced once when retrieval embedded the
+    query, and each candidate's vector is the ``Chunk.embedding`` already stored in
+    the index at ingestion time. Reranking is therefore pure in-memory cosine math
+    with no model round-trip — re-embedding the query plus every candidate on the
+    CPU profile (BGE-M3) was the dominant per-question latency and is fully
+    redundant with the vectors the system already holds. Returns ``(chunk, score)``
+    pairs sorted high-to-low. Empty in, empty out. A cross-encoder
+    (bge-reranker-v2-m3) remains a future upgrade, but would reintroduce a model
+    call by design and should be gated behind a config flag.
     """
     if not chunks:
         return []
-    vectors = await embed([query] + [c.content for c in chunks])
-    qvec, cand_vecs = vectors[0], vectors[1:]
-    scored = [(chunk, _cosine_to_unit(qvec, cv)) for chunk, cv in zip(chunks, cand_vecs)]
+    scored = [
+        (chunk, _cosine_to_unit(query_embedding, list(chunk.embedding)))
+        for chunk in chunks
+    ]
     scored.sort(key=lambda x: x[1], reverse=True)
     return scored

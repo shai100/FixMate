@@ -61,6 +61,7 @@ required for a default local run. Key knobs (see `.env.example` / `fixmate/core/
 | `LLM_PROVIDER` | `ollama` | `ollama` (local) or `anthropic` (production). |
 | `OLLAMA_GENERATION_MODEL` | `qwen3:4b` | Local generation model. |
 | `OLLAMA_EMBEDDING_MODEL` | `bge-m3` | Local embedding model (1024-dim — matches `chunks.embedding`). |
+| `OLLAMA_KEEP_ALIVE` | `-1` | How long Ollama keeps a model resident. `-1` = never unload, so the embedding and generation models both stay loaded and no query pays a cold model load (the dominant retrieval latency on the 4 GB profile). The `ollama` Compose service also sets `OLLAMA_KEEP_ALIVE=-1` and `OLLAMA_MAX_LOADED_MODELS=2`. |
 | `ANTHROPIC_API_KEY` | _(empty)_ | Required only when `LLM_PROVIDER=anthropic`. Never commit. |
 | `DEV_AUTH` | `true` | Phase 6 header auth. **Must be `false` outside local** — when false the API validates Keycloak Bearer tokens (Phase 9). |
 | `DEV_AUTO_LOGIN` | `false` | Local-only convenience. When `true` (and `DEV_AUTH=true`) the web client auto-signs-in as a demo-tenant admin via `GET /dev/auto-login`, skipping the manual UUID entry. |
