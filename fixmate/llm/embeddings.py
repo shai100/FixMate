@@ -9,6 +9,7 @@ it would require re-embedding every chunk.
 """
 
 import asyncio
+from collections.abc import Callable
 
 import httpx
 
@@ -33,7 +34,10 @@ _EMBED_BATCH_SIZE = 32
 _EMBED_CONCURRENCY = 4
 
 
-async def embed(texts: list[str]) -> list[list[float]]:
+async def embed(
+    texts: list[str],
+    on_progress: Callable[[int, int], None] | None = None,
+) -> list[list[float]]:
     """Embed a batch of texts into 1024-dim vectors via the Ollama embed API.
 
     Splits the input into bounded sub-batches (``_EMBED_BATCH_SIZE``) so a large
@@ -42,6 +46,13 @@ async def embed(texts: list[str]) -> list[list[float]]:
     then reassembles the vectors in input order. Asserts every returned vector
     has the expected dimension so a model/config mismatch fails loudly instead of
     corrupting the index.
+
+    Args:
+        texts: The chunk texts to embed.
+        on_progress: Optional callback invoked ``(done_texts, total_texts)`` each
+            time a batch completes, so the ingestion pipeline can surface a live
+            progress bar during the embedding stage (the slowest phase on the CPU
+            profile). Called from the event loop thread; keep it cheap.
 
     How it works: the texts are sliced into ordered batches; a semaphore caps how
     many are POSTed at once. ``asyncio.gather`` preserves the batch order it is
@@ -57,17 +68,27 @@ async def embed(texts: list[str]) -> list[list[float]]:
         for start in range(0, len(texts), _EMBED_BATCH_SIZE)
     ]
     sem = asyncio.Semaphore(_EMBED_CONCURRENCY)
+    done = 0
+    total = len(texts)
 
     async with httpx.AsyncClient(timeout=120) as client:
 
         async def embed_batch(batch: list[str]) -> list[list[float]]:
+            nonlocal done
             async with sem:
                 resp = await client.post(
                     f"{settings.ollama_base_url.rstrip('/')}/api/embed",
                     json={"model": settings.ollama_embedding_model, "input": batch},
                 )
                 resp.raise_for_status()
-                return resp.json()["embeddings"]
+                vectors = resp.json()["embeddings"]
+            # Report after the request returns, not when it is scheduled, so the
+            # bar reflects work actually finished. gather runs concurrently, so
+            # batches may complete out of order — we only count, never assume order.
+            done += len(batch)
+            if on_progress is not None:
+                on_progress(done, total)
+            return vectors
 
         batch_results = await asyncio.gather(*(embed_batch(b) for b in batches))
 

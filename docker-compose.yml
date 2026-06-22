@@ -1,7 +1,7 @@
 # Local development stack for FixMate. `docker compose up` starts the four
-# backing services the app needs; the API and worker run on the host against
-# them. Each service maps to a settings.py default so a fresh clone runs with no
-# extra config. (See setup-instructions.md.)
+# backing services plus the Celery ingestion worker; the API runs on the host
+# against them. Each backing service maps to a settings.py default so a fresh
+# clone runs with no extra config. (See setup-instructions.md.)
 services:
   # PostgreSQL with the pgvector extension preinstalled: the main database AND
   # the vector store for embeddings (one datastore keeps RLS tenant isolation
@@ -39,6 +39,29 @@ services:
     # GPU passthrough (WSL2 + NVIDIA driver). Alternative: run Ollama natively on
     # Windows and set OLLAMA_BASE_URL=http://host.docker.internal:11434 (spec §8.2).
     deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }] } } }
+  # Celery ingestion worker: consumes upload tasks from Redis and runs the
+  # ingestion pipeline. Running it in Compose (rather than as a manually-started
+  # host process) means uploads are always processed — a missing worker used to
+  # leave uploads stuck on "Queued for ingestion…" forever. Env vars point the
+  # shared settings at the Compose service hostnames instead of the host defaults.
+  worker:
+    build: .
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+      minio: { condition: service_started }
+      ollama: { condition: service_started }
+    environment:
+      DATABASE_URL: postgresql+asyncpg://fixmate:fixmate@postgres:5432/fixmate
+      DATABASE_APP_URL: postgresql+asyncpg://fixmate_app:fixmate_app@postgres:5432/fixmate
+      REDIS_URL: redis://redis:6379/0
+      S3_ENDPOINT: http://minio:9000
+      OLLAMA_BASE_URL: http://ollama:11434
+      # Resolves staged uploads to /uploads, the container side of the bind mount
+      # below. The host API stages them to ./.fixmate-uploads (settings default),
+      # so both sides see the same bytes via only the filename (no host paths).
+      UPLOAD_DIR: /uploads
+    volumes: ["./.fixmate-uploads:/uploads"]
   # Keycloak: OIDC identity provider for production auth (Phase 9). Behind the
   # "auth" profile so it doesn't start by default — dev uses header auth instead.
   keycloak:

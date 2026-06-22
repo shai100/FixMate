@@ -14,19 +14,30 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api";
 import type { DocumentRow, Equipment } from "../types";
 
-/** Poll interval (ms) and cap while waiting for background ingestion to finish. */
-const POLL_INTERVAL_MS = 2000;
-const POLL_MAX_ATTEMPTS = 150; // ~5 minutes; matches the 500-page <10min SLO.
+/** Poll interval (ms) and cap while waiting for background ingestion to finish.
+ *  A short interval keeps the progress bar feeling live; the attempt cap still
+ *  covers the 500-page <10min SLO (750ms × 800 = 10 min). */
+const POLL_INTERVAL_MS = 750;
+const POLL_MAX_ATTEMPTS = 800;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Turn a raw Celery task state into a human progress message. */
-function statusLabel(status: string): string {
+/** Live ingestion progress shown to the user: a message plus an optional bar. */
+interface Progress {
+  message: string;
+  percent: number | null;
+}
+
+/** Turn an ingestion status (and optional worker-published stage) into a human
+ *  progress message. `stage` is the granular label the pipeline emits while
+ *  processing (e.g. "Embedding chunks (320/3040)"); fall back to the coarse
+ *  Celery state when it isn't available yet. */
+function statusLabel(status: string, stage?: string | null): string {
   switch (status) {
     case "ingested":
       return "Ingestion complete — manual is now live.";
-    case "started":
-      return "Processing — extracting text, figures, and embeddings…";
+    case "processing":
+      return stage ? `${stage}…` : "Processing — extracting text, figures, and embeddings…";
     case "queued":
     case "pending":
       return "Queued for ingestion…";
@@ -41,7 +52,7 @@ export function DocumentsAdmin() {
   const [equipmentId, setEquipmentId] = useState("");
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -62,7 +73,7 @@ export function DocumentsAdmin() {
     if (!file || !equipmentId || busy) return;
     setBusy(true);
     setError(null);
-    setStatus(null);
+    setProgress(null);
     try {
       const res = await api.uploadDocument(file, equipmentId, title.trim() || undefined);
       // The upload itself is done the moment the API accepts it (202). Clear the
@@ -75,7 +86,7 @@ export function DocumentsAdmin() {
       void pollIngestion(res.task_id);
     } catch (e) {
       setError(e instanceof ApiError ? e.detail : "Upload failed");
-      setStatus(null);
+      setProgress(null);
       setBusy(false);
     }
   }
@@ -94,27 +105,33 @@ export function DocumentsAdmin() {
    * and the technician would see the status frozen with no explanation.
    */
   async function pollIngestion(taskId: string) {
-    setStatus(statusLabel("queued"));
+    setProgress({ message: statusLabel("queued"), percent: 0 });
     try {
       for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
         const s = await api.documentStatus(taskId);
         if (s.status === "ingested") {
-          setStatus(statusLabel("ingested"));
+          setProgress({ message: statusLabel("ingested"), percent: 100 });
           setRevision((r) => r + 1);
           return;
         }
         if (s.status === "failure") {
-          setStatus(null);
+          setProgress(null);
           setError("Ingestion failed — the file could not be processed. Please try again.");
           return;
         }
-        setStatus(statusLabel(s.status));
+        setProgress({
+          message: statusLabel(s.status, s.stage),
+          percent: s.percent ?? null,
+        });
         await sleep(POLL_INTERVAL_MS);
       }
-      setStatus("Still processing in the background — check back shortly.");
+      setProgress({
+        message: "Still processing in the background — check back shortly.",
+        percent: null,
+      });
       setRevision((r) => r + 1);
     } catch (e) {
-      setStatus(null);
+      setProgress(null);
       setError(
         e instanceof ApiError
           ? `Could not check ingestion status: ${e.detail}`
@@ -154,10 +171,23 @@ export function DocumentsAdmin() {
         </button>
       </form>
 
-      {status && (
-        <p className="console-status" role="status" aria-live="polite">
-          {status}
-        </p>
+      {progress && (
+        <div className="ingest-progress" role="status" aria-live="polite">
+          <div className="ingest-progress__row">
+            <span className="console-status">{progress.message}</span>
+            {progress.percent !== null && (
+              <span className="console-muted">{progress.percent}%</span>
+            )}
+          </div>
+          {/* A null percent (queued / timed-out) renders an indeterminate bar by
+              omitting the value attribute. */}
+          <progress
+            className="ingest-progress__bar"
+            max={100}
+            value={progress.percent ?? undefined}
+            aria-label="Ingestion progress"
+          />
+        </div>
       )}
       {error && (
         <p className="console-error" role="alert">

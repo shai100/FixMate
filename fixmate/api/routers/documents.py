@@ -8,7 +8,6 @@ manage the resulting ``Document`` rows, whose version lineage is immutable
 provenance — only the title can be edited.
 """
 
-import tempfile
 import uuid
 from pathlib import Path
 
@@ -21,14 +20,17 @@ from fixmate.api.schemas import DocumentOut, DocumentStatus, UpdateDocument, Upl
 from fixmate.core import storage
 from fixmate.core.db import session_for_org
 from fixmate.core.models import AuditEvent, Document, Figure
+from fixmate.core.settings import settings
 from fixmate.ingestion.tasks import ingest_document_task
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
-# Uploads are handed to the Celery worker as a filesystem path (worker + API
-# share the host in the local profile). The pipeline re-uploads the original PDF
-# to MinIO under the tenant prefix, so this temp file is only the enqueue handoff.
-_UPLOAD_DIR = Path(tempfile.gettempdir()) / "fixmate-uploads"
+# Uploads are staged to a shared directory and the Celery worker is handed only
+# the staged *filename* (not an absolute path), so a worker running in a
+# container resolves the same file via a bind mount of this directory — see
+# settings.upload_dir. The pipeline re-uploads the original PDF to MinIO under
+# the tenant prefix, so this staged file is only the enqueue handoff.
+_UPLOAD_DIR = Path(settings.upload_dir)
 
 
 @router.post("/upload", status_code=202, response_model=UploadAccepted)
@@ -61,11 +63,13 @@ async def upload_document(
 
     _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = file.filename or f"{uuid.uuid4()}.pdf"
-    dest = _UPLOAD_DIR / f"{uuid.uuid4()}-{Path(name).name}"
-    dest.write_bytes(data)
+    # Unique prefix avoids collisions; only the filename is passed to the worker,
+    # which re-resolves it against its own upload_dir (host or container path).
+    staged_name = f"{uuid.uuid4()}-{Path(name).name}"
+    (_UPLOAD_DIR / staged_name).write_bytes(data)
 
     task = ingest_document_task.delay(
-        str(auth.org_id), str(eq_id), str(dest), title or Path(name).name
+        str(auth.org_id), str(eq_id), staged_name, title or Path(name).name
     )
     return UploadAccepted(task_id=task.id, status="queued")
 
@@ -235,8 +239,10 @@ async def document_status(
 ) -> DocumentStatus:
     """Report ingestion progress for an upload task.
 
-    Reads the Celery task state; on success returns the new document id, otherwise
-    the lowercased task state ("pending", "failure", ...).
+    Reads the Celery task state; on success returns the new document id, while a
+    running task is reported as ``processing`` with the live ``stage``/``percent``
+    the worker published, otherwise the lowercased task state ("pending",
+    "failure", ...).
     """
     # Ingestion status (FR-8) is read from the Celery result: the task returns
     # the new document id on success. PENDING covers both "queued" and "unknown
@@ -245,6 +251,15 @@ async def document_status(
     state = result.state
     if state == "SUCCESS":
         return DocumentStatus(
-            task_id=task_id, status="ingested", document_id=uuid.UUID(result.result)
+            task_id=task_id, status="ingested", percent=100, document_id=uuid.UUID(result.result)
+        )
+    if state == "PROGRESS":
+        # Custom state published by the worker: info is the {stage, percent} meta.
+        info = result.info if isinstance(result.info, dict) else {}
+        return DocumentStatus(
+            task_id=task_id,
+            status="processing",
+            stage=info.get("stage"),
+            percent=info.get("percent"),
         )
     return DocumentStatus(task_id=task_id, status=state.lower())

@@ -87,7 +87,7 @@ is used locally (see §6).
 | Layer | Technology | Where |
 |-------|-----------|-------|
 | API | Python 3.12, FastAPI, async SQLAlchemy 2 | `fixmate/api`, `fixmate/core` |
-| Async workers | Celery (Redis broker) | `fixmate/ingestion/tasks.py` |
+| Async workers | Celery (Redis broker), runs as the `worker` Compose service | `fixmate/ingestion/tasks.py`, `Dockerfile` |
 | RDBMS | PostgreSQL 16 + Row-Level Security | `db/migrations`, `fixmate/core` |
 | Vector search | pgvector (1024-dim, BGE-M3) | `fixmate/retrieval/vector.py` |
 | Keyword search | PostgreSQL full-text search (tsvector) | `fixmate/retrieval/keyword.py` |
@@ -170,7 +170,7 @@ per resource:
 | `conversations` | Create conversations, list messages |
 | `ask` | `POST /conversations/{id}/ask` — the core Q&A endpoint |
 | `equipment` | Equipment profiles CRUD |
-| `documents` | Upload manuals → kicks off ingestion; poll ingestion status (`GET /documents/{task_id}`); stream the original PDF back (`GET /documents/{document_id}/download`) |
+| `documents` | Upload manuals → kicks off ingestion; poll ingestion status (`GET /documents/{task_id}`, returns live `stage`/`percent` while the worker runs); stream the original PDF back (`GET /documents/{document_id}/download`) |
 | `feedback` | "Did it help?" + technician fix submission |
 | `curation` | Review queue + fix lifecycle actions (curator/admin) |
 | `admin` | User management |
@@ -220,7 +220,17 @@ Triggered when a document is uploaded; runs in a **Celery worker** (not in the r
 5. Persist `Document`, `Chunk` (`source_type='manual'`), and `Figure` rows in one transaction.
 
 The Celery wrapper is [`tasks.py`](../fixmate/ingestion/tasks.py); it calls the sync entry point
-which runs the async pipeline in its own event loop.
+which runs the async pipeline in its own event loop. The task is `bind=True` and publishes a
+`PROGRESS` state (`{stage, percent}`) as the pipeline advances, which `GET /documents/{task_id}`
+relays so the upload UI can render a live progress bar.
+
+The worker runs as the **`worker` service in `docker-compose.yml`** (built from the repo
+`Dockerfile`), so uploads are always processed — a missing worker previously left them stuck on
+"Queued for ingestion…". Handoff is by *filename*, not absolute path: the API stages the PDF to
+`settings.upload_dir` (`.fixmate-uploads`, bind-mounted to `/uploads` in the worker container) and
+enqueues only the filename, which the worker re-resolves against its own `upload_dir`. This keeps
+the host API (Windows paths) and the Linux worker container sharing one directory without passing
+host-absolute paths across the OS boundary.
 
 ### 5.5 `retrieval` — hybrid search
 

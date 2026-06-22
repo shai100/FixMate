@@ -10,3 +10,6 @@ dist/
 web/dev-dist/
 web/*.tsbuildinfo
 web/dev.*.log
+# Staging dir for uploaded PDFs awaiting ingestion (settings.upload_dir); shared
+# with the Compose worker via bind mount. Transient — never committed.
+.fixmate-uploads/

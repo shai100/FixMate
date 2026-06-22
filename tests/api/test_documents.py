@@ -39,7 +39,13 @@ async def test_upload_enqueues_and_status_reports(client, org_user_equipment, sa
     # worker picks it up; the broker is the live Redis from compose).
     status = await client.get(f"/documents/{task_id}", headers=headers)
     assert status.status_code == 200
-    assert status.json()["status"] in ("pending", "queued", "started", "ingested")
+    assert status.json()["status"] in (
+        "pending",
+        "queued",
+        "started",
+        "processing",
+        "ingested",
+    )
 
 
 async def _make_document(org_a, eq_id, title="Manual") -> str:

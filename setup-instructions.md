@@ -79,9 +79,19 @@ required for a default local run. Key knobs (see `.env.example` / `fixmate/core/
 docker compose up -d
 ```
 
-This starts the four MVP services: `postgres` (pgvector/pg16), `redis`, `minio`, `ollama`.
+This starts the four backing services — `postgres` (pgvector/pg16), `redis`, `minio`,
+`ollama` — plus the `worker` (the Celery ingestion worker, built from the repo
+`Dockerfile`). The worker consumes upload tasks from Redis and runs the ingestion
+pipeline; running it in Compose means **document uploads are processed
+automatically** — without it, uploads sit on "Queued for ingestion…" forever.
 `keycloak` is behind the `auth` compose profile and is **not** started for MVP setup
 (it comes online in Phase 9 via `docker compose --profile auth up -d`).
+
+The worker reads staged PDFs from `./.fixmate-uploads` (bind-mounted to `/uploads`
+in the container). The host API stages uploads there via `settings.upload_dir`, so
+run the API (section 7) from the repo root so the two agree on that directory.
+After changing any `fixmate/` code the worker runs, rebuild it:
+`docker compose up -d --build worker`.
 
 Confirm services are up and Postgres is healthy:
 
@@ -293,23 +303,29 @@ garbage/wrong-key/wrong-issuer/missing-claim, no Keycloak needed) plus one
 `@pytest.mark.integration` case running a real password-grant flow against live Keycloak —
 run the two commands above first, then `pytest tests/auth -v`.
 
-### Async ingestion via Celery (optional)
+### Async ingestion via Celery
 
-The `--async` flag enqueues ingestion on the Celery worker instead of running inline.
-Start a worker (the `--pool=solo` pool is required on Windows):
+Document uploads through the API/UI are always async: the API enqueues a Celery
+task that the **`worker` Compose service** consumes (section 4). Poll
+`GET /documents/{task_id}` for live `stage`/`percent` progress.
 
-```bash
-celery -A fixmate.ingestion.tasks worker -l info --pool=solo
-```
-
-Then enqueue:
+The CLI `--async` flag enqueues the same task instead of running inline:
 
 ```bash
 python -m fixmate.ingestion.cli tests/fixtures/sample-manual.pdf --org demo --equipment "Pump X" --async
 ```
 
-The CLI prints the task id; the worker logs the resulting document id. Redis (already in
-the Compose stack) is the broker and result backend.
+The CLI prints the task id; the worker logs the resulting document id. Note the
+Compose worker reads PDFs from the shared `./.fixmate-uploads` mount, so a CLI
+`--async` run pointing at a path outside that directory won't be visible to it —
+for arbitrary local paths run a worker on the host instead (the `--pool=solo`
+pool is required on Windows):
+
+```bash
+celery -A fixmate.ingestion.tasks worker -l info --pool=solo
+```
+
+Redis (in the Compose stack) is the broker and result backend either way.
 
 ---
 

@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     # policies only bite when not connected as the table owner/superuser.
     database_app_url: str = "postgresql+asyncpg://fixmate_app:fixmate_app@localhost:5432/fixmate"
     redis_url: str = "redis://localhost:6379/0"
+    # Staging directory for uploaded PDFs awaiting ingestion. The API writes the
+    # bytes here and hands the Celery worker only the *filename*; the worker
+    # resolves it back to a full path under this same directory. Keeping it a
+    # plain (repo-relative) path means the host API and a containerized worker can
+    # share it via one bind mount without passing host-absolute paths across the
+    # OS boundary (the worker sets UPLOAD_DIR=/uploads in docker-compose).
+    upload_dir: str = ".fixmate-uploads"
     s3_endpoint: str = "http://localhost:9000"
     s3_access_key: str = "fixmate"
     s3_secret_key: str = "fixmate123"

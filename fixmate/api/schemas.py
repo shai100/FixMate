@@ -190,11 +190,18 @@ class UploadAccepted(BaseModel):
 
 
 class DocumentStatus(BaseModel):
-    """Progress of an ingestion task; ``document_id`` is filled once ingestion finishes."""
+    """Progress of an ingestion task.
+
+    ``document_id`` is filled once ingestion finishes. While the task runs,
+    ``percent`` (0-100) and ``stage`` carry the live progress the worker publishes
+    so the upload UI can render a real progress bar.
+    """
 
     task_id: str
     status: str
     document_id: uuid.UUID | None = None
+    percent: int | None = None
+    stage: str | None = None
 
 
 class DocumentOut(BaseModel):

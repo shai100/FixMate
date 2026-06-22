@@ -1,0 +1,14 @@
+# Keep the worker image small and builds fast: only pyproject.toml + fixmate/ are
+# COPYed by the Dockerfile, but excluding these avoids sending them as build
+# context at all.
+.git
+.venv
+web
+docs
+tests
+scripts
+.fixmate-uploads
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache

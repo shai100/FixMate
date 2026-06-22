@@ -1852,6 +1852,43 @@ textarea.inp {
   color: var(--txt3);
 }
 
+/* Live ingestion progress: a labelled row above a thin determinate/indeterminate
+   bar. Mirrors the worker-published stage/percent so uploads feel responsive. */
+.ingest-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+.ingest-progress__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+.ingest-progress__bar {
+  width: 100%;
+  height: 0.5rem;
+  border: none;
+  border-radius: 999px;
+  overflow: hidden;
+  appearance: none;
+  background: var(--bg3, rgba(255, 255, 255, 0.08));
+}
+.ingest-progress__bar::-webkit-progress-bar {
+  background: var(--bg3, rgba(255, 255, 255, 0.08));
+  border-radius: 999px;
+}
+.ingest-progress__bar::-webkit-progress-value {
+  background: var(--infoT);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.ingest-progress__bar::-moz-progress-bar {
+  background: var(--infoT);
+  border-radius: 999px;
+}
+
 /* Escalation (technician, low confidence) */
 .escalation-card {
   background: var(--surface);
