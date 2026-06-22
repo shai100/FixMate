@@ -1537,6 +1537,25 @@ textarea.inp {
   font-size: 0.82rem;
 }
 
+/* "Open technician view" lets curators/admins jump into the technician app to
+ * try the live system. It carries the auto margin that pushes the topbar's
+ * trailing actions to the right; when both buttons are present, sign-out sits
+ * next to it with a small gap instead of grabbing its own auto margin. */
+.console-techview {
+  margin-inline-start: auto;
+  background: transparent;
+  border: 1px solid var(--accent, var(--border2));
+  color: var(--accent, var(--txt2));
+  border-radius: var(--r-m);
+  height: 42px;
+  padding: 0 16px;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+.console-techview + .console-signout {
+  margin-inline-start: 8px;
+}
+
 .console-section,
 .review-queue,
 .review-detail {

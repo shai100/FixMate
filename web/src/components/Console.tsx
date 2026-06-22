@@ -36,9 +36,13 @@ const TABS: TabDef[] = [
 export function Console({
   role,
   onSignOut,
+  onOpenTechView,
 }: {
   role: DevIdentity["role"];
   onSignOut?: () => void;
+  /** Opens the technician "tech screen" so the curator/admin can ask about their
+   *  equipment and see how the system answers, then return to the console. */
+  onOpenTechView?: () => void;
 }) {
   const tabs = TABS.filter((t) => !t.adminOnly || role === "admin");
   const [tab, setTab] = useState<Tab>("queue");
@@ -55,6 +59,11 @@ export function Console({
             CURATION CONSOLE · {role.toUpperCase()} · <span className="ltr">v{__APP_VERSION__}</span>
           </div>
         </div>
+        {onOpenTechView && (
+          <button type="button" className="console-techview" onClick={onOpenTechView}>
+            Open technician view
+          </button>
+        )}
         {onSignOut && (
           <button type="button" className="console-signout" onClick={onSignOut}>
             Sign out

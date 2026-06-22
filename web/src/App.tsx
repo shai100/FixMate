@@ -3,8 +3,15 @@
  *
  * <App> decides what the whole screen shows based on who is signed in:
  *   - nobody signed in        -> the dev login screen
- *   - a curator or admin      -> the desktop curator/admin <Console>
+ *   - a curator or admin      -> the desktop curator/admin <Console>, which can
+ *                                open the technician app to try the live system
  *   - a technician            -> the phone-framed <TechnicianApp>
+ *
+ * Every user type can reach the <TechnicianApp> ("tech screen") so curators and
+ * admins can ask about their equipment and see exactly what their technicians
+ * experience — useful for sanity-checking retrieval and how the system answers.
+ * Technicians live there permanently; curators/admins toggle into it from the
+ * console and back.
  *
  * <TechnicianApp> is the field-technician experience: a tabbed shell (Equipment,
  * Packs, Profile, plus a Settings screen and a Chat screen reached by selecting
@@ -63,14 +70,43 @@ export function App() {
   // the phone-framed chat flow (Phase 10). Role comes from the authenticated
   // identity (CLAUDE.md §6).
   if (identity.role === "curator" || identity.role === "admin") {
-    return (
-      <div className="console-stage">
-        <Console role={identity.role} onSignOut={signOut} />
-      </div>
-    );
+    return <ConsoleApp identity={identity} onSignOut={signOut} />;
   }
 
   return <TechnicianApp identity={identity} onSignOut={signOut} />;
+}
+
+/** The curator/admin experience: the desktop console, with the ability to open
+ *  the technician "tech screen" to try the live system as a technician would and
+ *  return to the console afterward. */
+function ConsoleApp({
+  identity,
+  onSignOut,
+}: {
+  identity: DevIdentity;
+  onSignOut: () => void;
+}) {
+  const [view, setView] = useState<"console" | "tech">("console");
+
+  if (view === "tech") {
+    return (
+      <TechnicianApp
+        identity={identity}
+        onSignOut={onSignOut}
+        onBackToConsole={() => setView("console")}
+      />
+    );
+  }
+
+  return (
+    <div className="console-stage">
+      <Console
+        role={identity.role}
+        onSignOut={onSignOut}
+        onOpenTechView={() => setView("tech")}
+      />
+    </div>
+  );
 }
 
 /** The field-technician experience: a phone-framed, tabbed shell that loads the
@@ -79,9 +115,13 @@ export function App() {
 function TechnicianApp({
   identity,
   onSignOut,
+  onBackToConsole,
 }: {
   identity: DevIdentity;
   onSignOut: () => void;
+  /** When present (curator/admin trying the tech screen), Settings shows a
+   *  "Back to console" action that returns to the curation console. */
+  onBackToConsole?: () => void;
 }) {
   const [screen, setScreen] = useState<Screen>("equipment");
   const [lastTab, setLastTab] = useState<Screen>("equipment");
@@ -140,6 +180,7 @@ function TechnicianApp({
               identity={identity}
               onBack={() => setScreen(lastTab)}
               onSignOut={onSignOut}
+              onBackToConsole={onBackToConsole}
             />
           )}
         </div>

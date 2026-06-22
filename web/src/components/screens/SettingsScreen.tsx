@@ -14,10 +14,15 @@ export function SettingsScreen({
   identity,
   onBack,
   onSignOut,
+  onBackToConsole,
 }: {
   identity: DevIdentity;
   onBack: () => void;
   onSignOut: () => void;
+  /** When present (a curator/admin trying the tech screen), shows a "Back to
+   *  console" action in the Account section that returns to the curation console
+   *  instead of signing out. */
+  onBackToConsole?: () => void;
 }) {
   const [scale, setScale] = useState(100);
   const [voice, setVoice] = useState(true);
@@ -100,6 +105,17 @@ export function SettingsScreen({
                 <div className="srS ltr">{identity.role}</div>
               </div>
             </div>
+            {onBackToConsole && (
+              <button className="setRow" onClick={onBackToConsole}>
+                <div className="srIc">
+                  <Icon name="back" size={17} />
+                </div>
+                <div>
+                  <div className="srT">Back to console</div>
+                  <div className="srS">Return to the curation console</div>
+                </div>
+              </button>
+            )}
             <button className="setRow" onClick={onSignOut}>
               <div className="srIc">
                 <Icon name="logout" size={17} />
