@@ -57,8 +57,19 @@ class Settings(BaseSettings):
     s3_bucket: str = "fixmate"
     llm_provider: str = "ollama"
     ollama_base_url: str = "http://localhost:11434"
-    ollama_generation_model: str = "qwen3:4b"
+    # Llama-3.2-3B-Instruct: a non-reasoning instruct model chosen over qwen3:4b
+    # for the local profile because (a) it emits no chain-of-thought, so there are
+    # no thinking tokens to generate-then-discard, and (b) at Q4 (~2 GB) it fits
+    # fully in a 4 GB GPU, keeping all layers on-device for ~40-80 t/s vs qwen3's
+    # ~8 t/s CPU-spill. Strong instruction-following suits grounded RAG answers.
+    ollama_generation_model: str = "llama3.2:3b"
     ollama_embedding_model: str = "bge-m3"
+    # Force the embedding model onto CPU (num_gpu=0) so it never competes with the
+    # generation model for the 4 GB of VRAM. With both pinned resident
+    # (keep_alive=-1), letting bge-m3 share the GPU pushed generation layers back
+    # to CPU and recreated the ~8 t/s bottleneck. Embedding on CPU is fast enough
+    # (~2.8 chunks/s, see embeddings.py) and keeps the GPU dedicated to answers.
+    ollama_embed_on_cpu: bool = True
     # How long Ollama keeps a model resident after a request. "-1" = never unload,
     # so the embedding and generation models stay loaded and no query pays a cold
     # model load (the dominant retrieval latency on the 4 GB profile — see the

@@ -93,7 +93,7 @@ is used locally (see §6).
 | Keyword search | PostgreSQL full-text search (tsvector) | `fixmate/retrieval/keyword.py` |
 | Object storage | MinIO locally → S3 in cloud (boto3) | `fixmate/core/storage.py` |
 | PDF/OCR | PyMuPDF; Claude vision for figure captions | `fixmate/ingestion` |
-| LLM | Ollama (local: qwen3:4b + bge-m3) or Anthropic Claude | `fixmate/llm` |
+| LLM | Ollama (local: llama3.2:3b generation on GPU + bge-m3 embeddings on CPU) or Anthropic Claude | `fixmate/llm` |
 | Auth | Keycloak OIDC (prod) / dev headers (local) | `fixmate/api/deps.py`, `auth_oidc.py` |
 | Web client | React + Vite + TypeScript | `web/` |
 | Local infra | Docker Compose | `docker-compose.yml` |

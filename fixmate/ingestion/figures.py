@@ -32,7 +32,7 @@ async def caption_and_store(
     try:
         caption = await provider.caption_image(figure.image, figure.media_type, context)
     except NotImplementedError:
-        # Local backend (qwen3:4b) has no vision (spec §8.3); fall back to a
+        # Local backend (llama3.2:3b) has no vision (spec §8.3); fall back to a
         # deterministic, non-empty caption so the figure stays indexable.
         caption = f"Figure on page {figure.page} of {context}"
 

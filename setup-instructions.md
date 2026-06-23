@@ -19,7 +19,9 @@ Install these before starting:
 | **NVIDIA GPU + driver** (optional) | — | For local Ollama acceleration (spec §8.3). Without a GPU, Ollama runs on CPU (slower) or run Ollama natively on Windows — see note in `docker-compose.yml`. |
 
 The local stack targets the spec §8 "full local-PC profile". A 4 GB GPU is enough for the
-`qwen3:4b` (Q4 generation) + `bge-m3` (CPU embeddings) profile.
+`llama3.2:3b` (Q4 generation, on GPU) + `bge-m3` (CPU embeddings) profile. `llama3.2:3b` is a
+non-reasoning instruct model and fits fully in 4 GB VRAM, so it runs at ~40-80 t/s; embeddings
+are pinned to CPU (`OLLAMA_EMBED_ON_CPU=true`) so they don't evict generation from the GPU.
 
 ---
 
@@ -59,8 +61,9 @@ required for a default local run. Key knobs (see `.env.example` / `fixmate/core/
 | `REDIS_URL` | `redis://localhost:6379/0` | Celery broker (Phase 3+). |
 | `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` / `S3_BUCKET` | MinIO defaults | Object storage. |
 | `LLM_PROVIDER` | `ollama` | `ollama` (local) or `anthropic` (production). |
-| `OLLAMA_GENERATION_MODEL` | `qwen3:4b` | Local generation model. |
+| `OLLAMA_GENERATION_MODEL` | `llama3.2:3b` | Local generation model. Non-reasoning instruct model that fits a 4 GB GPU at Q4. |
 | `OLLAMA_EMBEDDING_MODEL` | `bge-m3` | Local embedding model (1024-dim — matches `chunks.embedding`). |
+| `OLLAMA_EMBED_ON_CPU` | `true` | Pin the embedding model to CPU (`num_gpu=0`) so it never competes with generation for the 4 GB GPU. Set `false` if you have ample VRAM. |
 | `OLLAMA_KEEP_ALIVE` | `-1` | How long Ollama keeps a model resident. `-1` = never unload, so the embedding and generation models both stay loaded and no query pays a cold model load (the dominant retrieval latency on the 4 GB profile). The `ollama` Compose service also sets `OLLAMA_KEEP_ALIVE=-1` and `OLLAMA_MAX_LOADED_MODELS=2`. |
 | `ANTHROPIC_API_KEY` | _(empty)_ | Required only when `LLM_PROVIDER=anthropic`. Never commit. |
 | `DEV_AUTH` | `true` | Phase 6 header auth. **Must be `false` outside local** — when false the API validates Keycloak Bearer tokens (Phase 9). |
@@ -109,7 +112,7 @@ Expect `postgres` to show `Up (healthy)`.
 The Ollama container starts empty. Pull the two required models:
 
 ```bash
-docker compose exec ollama ollama pull qwen3:4b
+docker compose exec ollama ollama pull llama3.2:3b
 docker compose exec ollama ollama pull bge-m3
 ```
 
@@ -147,7 +150,7 @@ Expected output (no `MISSING model` lines):
 postgres OK PostgreSQL 16.x ...
 redis OK
 minio OK
-ollama OK, models: ['bge-m3:latest', 'qwen3:4b']
+ollama OK, models: ['bge-m3:latest', 'llama3.2:3b']
 ```
 
 If a model is missing, the script prints the exact `ollama pull` command to fix it.
@@ -192,7 +195,7 @@ python -m fixmate.llm.cli "Say OK"                 # uses LLM_PROVIDER (default:
 python -m fixmate.llm.cli "Say OK" --provider anthropic   # requires ANTHROPIC_API_KEY
 ```
 
-Expect a line like `[ollama/qwen3:4b] OK`.
+Expect a line like `[ollama/llama3.2:3b] OK`.
 
 Ingest a manual end-to-end (Phase 3 standalone check). This creates the org/equipment
 if missing, parses the PDF, embeds chunks, captions + stores figures, and writes rows:

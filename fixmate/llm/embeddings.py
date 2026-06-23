@@ -76,16 +76,23 @@ async def embed(
         async def embed_batch(batch: list[str]) -> list[list[float]]:
             nonlocal done
             async with sem:
+                payload = {
+                    "model": settings.ollama_embedding_model,
+                    "input": batch,
+                    # Keep the embedding model resident between requests so a
+                    # query embed never pays a cold model load (the dominant
+                    # retrieval latency on the 4 GB profile, ~108 s cold).
+                    "keep_alive": settings.ollama_keep_alive_param,
+                }
+                if settings.ollama_embed_on_cpu:
+                    # num_gpu=0 pins bge-m3 to CPU so it never competes with the
+                    # generation model for 4 GB of VRAM. Sharing the GPU pushed
+                    # generation layers back to CPU and recreated the slow path;
+                    # CPU embedding is fast enough (~2.8 chunks/s) on this profile.
+                    payload["options"] = {"num_gpu": 0}
                 resp = await client.post(
                     f"{settings.ollama_base_url.rstrip('/')}/api/embed",
-                    json={
-                        "model": settings.ollama_embedding_model,
-                        "input": batch,
-                        # Keep the embedding model resident between requests so a
-                        # query embed never pays a cold model load (the dominant
-                        # retrieval latency on the 4 GB profile, ~108 s cold).
-                        "keep_alive": settings.ollama_keep_alive_param,
-                    },
+                    json=payload,
                 )
                 resp.raise_for_status()
                 vectors = resp.json()["embeddings"]

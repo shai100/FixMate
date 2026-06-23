@@ -30,15 +30,16 @@ services:
     volumes: [miniodata:/data]
   # Ollama: serves the local open-weight models (generation + BGE-M3 embeddings)
   # used in dev. Embeddings always run here even when LLM_PROVIDER=anthropic.
-  # Pinned to 0.6.x: 0.5+ properly honours the `think: false` param for qwen3,
-  # preventing runaway chain-of-thought generation that would exceed the 12s SLO.
+  # Generation uses llama3.2:3b (non-reasoning instruct, fits the 4 GB GPU at Q4);
+  # bge-m3 embeddings are pinned to CPU (OLLAMA_EMBED_ON_CPU) so the GPU stays
+  # dedicated to answers and generation runs at ~40-80 t/s instead of ~8.
   ollama:
     image: ollama/ollama:latest
     ports: ["11434:11434"]
     volumes: [ollamadata:/root/.ollama]
     # Keep both models resident so each query stops paying a cold model load.
     # On the 4 GB profile Ollama otherwise evicts a model the moment the other is
-    # needed, so every request swaps bge-m3 (embeddings) <-> qwen3:4b (generation)
+    # needed, so every request swaps bge-m3 (embeddings) <-> llama3.2:3b (generation)
     # — measured ~108 s on a cold query embed vs ~0.5 s once warm. KEEP_ALIVE=-1
     # never unloads; MAX_LOADED_MODELS=2 lets both stay loaded at once (retrieval
     # embeds, then generation runs, on every single answer).
