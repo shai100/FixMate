@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# FixMate pre-commit hook: auto-increment the patch version on every commit.
+#
+# Why: the build log / audit-trail values (CLAUDE.md §4.7) benefit from a
+# monotonically increasing version. The patch component is bumped by 1 on each
+# commit (e.g. 0.1.51 -> 0.1.52), kept in three places that hold a static
+# version string:
+#   - pyproject.toml            (Python package)
+#   - fixmate/api/main.py       (FastAPI app version)
+#   - web/package.json          (web client; major.minor also seeds vite.config.ts)
+#
+# The web GUI version (web/vite.config.ts) derives its patch from the git commit
+# count, so as long as this hook fires on every commit the two stay in lockstep.
+#
+# Enabled repo-wide via `git config core.hooksPath .githooks`.
+set -e
+
+root="$(git rev-parse --show-toplevel)"
+pyproject="$root/pyproject.toml"
+
+# Read the current major.minor.patch from pyproject.toml (the source of truth).
+current=$(grep -E '^version = "[0-9]+\.[0-9]+\.[0-9]+"' "$pyproject" \
+  | head -1 \
+  | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+
+if [ -z "$current" ]; then
+  echo "pre-commit: could not parse version from pyproject.toml; skipping bump" >&2
+  exit 0
+fi
+
+major=$(echo "$current" | cut -d. -f1)
+minor=$(echo "$current" | cut -d. -f2)
+patch=$(echo "$current" | cut -d. -f3)
+new="$major.$minor.$((patch + 1))"
+
+# Rewrite the three static version strings in place.
+sed -i -E "s/^version = \"[0-9]+\.[0-9]+\.[0-9]+\"/version = \"$new\"/" "$pyproject"
+sed -i -E "s/(version=\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1$new\2/" "$root/fixmate/api/main.py"
+sed -i -E "s/(\"version\": \")[0-9]+\.[0-9]+\.[0-9]+(\")/\1$new\2/" "$root/web/package.json"
+
+# Stage the bumped files so they land in this commit.
+git add "$pyproject" "$root/fixmate/api/main.py" "$root/web/package.json"
+
+echo "pre-commit: version bumped $current -> $new"

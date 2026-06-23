@@ -47,7 +47,7 @@ def _guard_auth_config() -> None:
 
 _guard_auth_config()
 
-app = FastAPI(title="FixMate API", version="0.1.0")
+app = FastAPI(title="FixMate API", version="0.1.51")
 
 
 @app.exception_handler(Exception)

@@ -15,7 +15,9 @@ build-backend = "setuptools.build_meta"
 #   LLM/IO:     httpx, anthropic, boto3 (S3), pymupdf (PDF)
 #   config:     pydantic-settings, pyyaml
 name = "fixmate"
-version = "0.1.0"
+# Patch is auto-incremented on every commit by the .githooks/pre-commit hook,
+# kept in lockstep with the web client's commit-count-derived patch (web/vite.config.ts).
+version = "0.1.51"
 description = "AI-powered troubleshooting assistant for field technicians"
 requires-python = ">=3.12"
 dependencies = [

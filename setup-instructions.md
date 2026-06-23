@@ -43,6 +43,22 @@ pip install -e ".[dev]"
 `pip install -e ".[dev]"` installs the `fixmate` package in editable mode plus the dev
 extras (`pytest`, `pytest-asyncio`, `ruff`).
 
+### Enable the shared git hooks
+
+The repo ships a pre-commit hook (`.githooks/pre-commit`) that auto-increments the patch
+version on every commit (e.g. `0.1.51` → `0.1.52`) across `pyproject.toml`,
+`fixmate/api/main.py`, and `web/package.json`. Point git at the tracked hooks directory once
+per clone:
+
+```bash
+git config core.hooksPath .githooks
+# Unix only — make the hook executable (no-op on Windows/Git Bash):
+chmod +x .githooks/pre-commit
+```
+
+The hook keeps the static version strings in lockstep with the web GUI version, whose patch
+is derived from the git commit count (`web/vite.config.ts`).
+
 ---
 
 ## 3. Configure environment variables
